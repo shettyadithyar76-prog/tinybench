@@ -10,7 +10,7 @@ TinyBench is designed to be beginner-friendly, modular, and accessible: you do n
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/tinybench.git
+git clone https://github.com/shettyadithyar76-prog/tinybench.git
 cd tinybench
 ```
 

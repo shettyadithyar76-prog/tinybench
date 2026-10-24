@@ -116,6 +116,13 @@ class TransformersModelAdapter(BaseModelAdapter):
                 f"Transformers and PyTorch are required to run {self.model_id}: {err}"
             ) from err
 
+        # Check whether `accelerate` is available (required for device_map in transformers 5+)
+        try:
+            import accelerate  # noqa: F401
+            _has_accelerate = True
+        except ImportError:
+            _has_accelerate = False
+
         t0 = time.perf_counter()
         try:
             logger.info(f"Loading tokenizer for {self.model_id}...")
@@ -131,13 +138,26 @@ class TransformersModelAdapter(BaseModelAdapter):
             torch_dtype = torch.float32 if self.dtype == "float32" else torch.bfloat16
 
             logger.info(f"Loading model weights for {self.model_id} on CPU...")
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                revision=self.revision,
-                torch_dtype=torch_dtype,
-                device_map="cpu",
-                low_cpu_mem_usage=True,
-            )
+            if _has_accelerate:
+                # accelerate allows `device_map` for efficient CPU sharding
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_id,
+                    revision=self.revision,
+                    torch_dtype=torch_dtype,
+                    device_map="cpu",
+                    low_cpu_mem_usage=True,
+                )
+            else:
+                # Fallback: load without device_map when accelerate is absent
+                logger.warning(
+                    "accelerate not installed — loading model without device_map. "
+                    "Install with: pip install accelerate"
+                )
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_id,
+                    revision=self.revision,
+                    torch_dtype=torch_dtype,
+                )
             self.model.eval()
 
             self._is_loaded = True

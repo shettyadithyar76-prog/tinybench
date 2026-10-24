@@ -1,6 +1,6 @@
 # TinyBench ⚡
 
-[![Tests](https://github.com/your-username/tinybench/actions/workflows/tests.yml/badge.svg)](https://github.com/your-username/tinybench/actions)
+[![Tests](https://github.com/shettyadithyar76-prog/tinybench/actions/workflows/tests.yml/badge.svg)](https://github.com/shettyadithyar76-prog/tinybench/actions)
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
 [![Hardware](https://img.shields.io/badge/hardware-CPU%20Only-orange.svg)]()
@@ -31,7 +31,7 @@ Students, hobbyists, and independent researchers working on everyday laptops are
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/tinybench.git
+git clone https://github.com/shettyadithyar76-prog/tinybench.git
 cd tinybench
 
 # Create and activate a virtual environment (Python 3.11+)
