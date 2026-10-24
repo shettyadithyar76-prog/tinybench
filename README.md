@@ -1,12 +1,14 @@
 ---
-title: TinyBench — Open-Weight LLM Benchmarking Studio
+title: TinyBench
 emoji: ⚡
 colorFrom: cyan
 colorTo: blue
 sdk: streamlit
+sdk_version: 1.41.0
 app_file: app.py
 pinned: false
 license: apache-2.0
+short_description: Lightweight open-weight LLM benchmarking for CPU laptops
 ---
 
 # TinyBench ⚡
