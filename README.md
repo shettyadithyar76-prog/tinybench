@@ -1,3 +1,14 @@
+---
+title: TinyBench — Open-Weight LLM Benchmarking Studio
+emoji: ⚡
+colorFrom: cyan
+colorTo: blue
+sdk: streamlit
+app_file: app.py
+pinned: false
+license: apache-2.0
+---
+
 # TinyBench ⚡
 
 [![Tests](https://github.com/shettyadithyar76-prog/tinybench/actions/workflows/tests.yml/badge.svg)](https://github.com/shettyadithyar76-prog/tinybench/actions)
