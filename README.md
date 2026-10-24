@@ -1,6 +1,6 @@
 # TinyBench ⚡
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://tinybench-aibenchmark.streamlit.app/)
 [![Tests](https://github.com/shettyadithyar76-prog/tinybench/actions/workflows/tests.yml/badge.svg)](https://github.com/shettyadithyar76-prog/tinybench/actions)
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
