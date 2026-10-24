@@ -1,17 +1,6 @@
----
-title: TinyBench
-emoji: ⚡
-colorFrom: indigo
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
-license: apache-2.0
-short_description: Lightweight open-weight LLM benchmarking for CPU laptops
----
-
 # TinyBench ⚡
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io)
 [![Tests](https://github.com/shettyadithyar76-prog/tinybench/actions/workflows/tests.yml/badge.svg)](https://github.com/shettyadithyar76-prog/tinybench/actions)
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
