@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "name": "tinybench",
+  "builds": [
+    {
+      "src": "web/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/web/$1"
+    }
+  ]
+}
