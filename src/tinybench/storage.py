@@ -52,6 +52,8 @@ class RunDatabase:
                 conn.execute("ALTER TABLE evaluation_runs ADD COLUMN is_demo INTEGER DEFAULT 0")
             # Ensure legacy mock runs are safely tagged as demo runs
             conn.execute("UPDATE evaluation_runs SET is_demo = 1 WHERE model_id LIKE 'mock%' OR model_name LIKE '%Mock%'")
+            # Normalize all Windows backslash paths to cross-platform POSIX forward slashes
+            conn.execute("UPDATE evaluation_runs SET json_path = REPLACE(json_path, '\\', '/')")
             conn.commit()
 
     def save_run(self, result: RunResult) -> Path:
@@ -91,7 +93,7 @@ class RunDatabase:
                     result.latency_summary.init_latency_seconds,
                     result.memory_measurement.peak_rss_mb,
                     result.memory_measurement.memory_delta_mb,
-                    str(json_path),
+                    json_path.as_posix(),
                     is_demo_val,
                 ),
             )
@@ -123,21 +125,28 @@ class RunDatabase:
 
     def get_run(self, run_id: str) -> RunResult | None:
         """Load complete RunResult object from disk for specified run_id."""
+        # 1. Direct path lookup in storage_dir (always cross-platform)
+        direct_path = self.storage_dir / f"{run_id}.json"
+        if direct_path.is_file():
+            with open(direct_path, "r", encoding="utf-8") as f:
+                return RunResult.model_validate(json.load(f))
+
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT json_path FROM evaluation_runs WHERE run_id = ?", (run_id,))
             row = cursor.fetchone()
             if not row:
-                # Also check direct json file in storage_dir
-                direct_path = self.storage_dir / f"{run_id}.json"
-                if direct_path.is_file():
-                    with open(direct_path, "r", encoding="utf-8") as f:
-                        return RunResult.model_validate(json.load(f))
                 return None
 
-            json_path = Path(row[0])
+            raw_path = str(row[0]).replace("\\", "/")
+            json_path = Path(raw_path)
             if not json_path.is_file():
-                return None
+                # Cross-platform fallback: look up by filename in storage_dir
+                fallback = self.storage_dir / json_path.name
+                if fallback.is_file():
+                    json_path = fallback
+                else:
+                    return None
 
             with open(json_path, "r", encoding="utf-8") as f:
                 return RunResult.model_validate(json.load(f))
