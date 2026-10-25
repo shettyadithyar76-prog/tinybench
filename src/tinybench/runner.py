@@ -38,6 +38,7 @@ class TaskResult(BaseModel):
     prompt: str = Field(..., description="Prompt presented to model.")
     expected_answer: Any = Field(..., description="Canonical target answer.")
     generated_text: str = Field(..., description="Raw model completion.")
+    thinking_text: str | None = Field(default=None, description="Internal reasoning tokens / chain-of-thought.")
     is_correct: bool = Field(default=False, description="Whether answer satisfies target accuracy criteria.")
     exact_match: bool = Field(default=False, description="Normalized string equality check.")
     compliance_score: float = Field(default=1.0, description="Instruction compliance score (0.0 to 1.0).")
@@ -244,12 +245,15 @@ class BenchmarkRunner:
         item: BenchmarkItem,
     ) -> TaskResult:
         """Run model inference on one item and grade output."""
+        thinking_text = None
         try:
             gen_res = adapter.generate(item.prompt, self.config.generation_config)
             output_text = gen_res.text
             latency = gen_res.latency_seconds
             p_tokens = gen_res.prompt_tokens
             g_tokens = gen_res.generated_tokens
+            if hasattr(gen_res, "metadata") and isinstance(gen_res.metadata, dict):
+                thinking_text = gen_res.metadata.get("thinking")
             error_msg = None
         except Exception as exc:
             logger.warning(f"Error evaluating task {item.task_id}: {exc}")
@@ -303,6 +307,7 @@ class BenchmarkRunner:
             prompt=item.prompt,
             expected_answer=item.expected_answer,
             generated_text=output_text,
+            thinking_text=thinking_text,
             is_correct=is_correct,
             exact_match=exact_match,
             compliance_score=compliance_score,

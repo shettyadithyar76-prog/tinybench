@@ -305,8 +305,15 @@ class OllamaModelAdapter(BaseModelAdapter):
             # Auto-verify load
             self.load()
 
+        # In Ollama 0.40+, models like Gemma 4 and DeepSeek-R1 emit extensive chain-of-thought tokens
+        # into a dedicated 'thinking' field (or internal <think> tag) before generating the final response.
+        # Ensure sufficient token budget (at least 384 tokens) so reasoning models do not exhaust tokens mid-thought.
+        num_predict = config.max_new_tokens
+        if num_predict < 384:
+            num_predict = max(config.max_new_tokens, 384)
+
         options: dict[str, Any] = {
-            "num_predict": config.max_new_tokens,
+            "num_predict": num_predict,
             "seed": config.seed,
             "temperature": config.temperature,
             "top_p": config.top_p,
@@ -337,10 +344,36 @@ class OllamaModelAdapter(BaseModelAdapter):
                 data = json.loads(raw_bytes.decode("utf-8"))
 
             wall_latency = round(time.perf_counter() - t0, 4)
-            reply_text = data.get("response", "").strip()
-            # If model is a reasoning model (e.g. DeepSeek-R1), strip <think>...</think> for answer evaluation
-            clean_answer = re.sub(r"<think>.*?</think>", "", reply_text, flags=re.DOTALL).strip()
-            effective_text = clean_answer if clean_answer else reply_text
+            raw_response = data.get("response", "").strip()
+            thinking_text = data.get("thinking", "").strip()
+
+            # 1. Clean <think>...</think> tags if model embedded them directly inside response
+            clean_answer = re.sub(r"<think>.*?</think>", "", raw_response, flags=re.DOTALL).strip()
+            # If <think> tag was unclosed due to length cutoff, strip leading <think>
+            clean_answer = re.sub(r"^<think>\s*", "", clean_answer).strip()
+
+            effective_text = clean_answer if clean_answer else raw_response
+
+            # 2. Resilient fallback: If response is still empty but thinking_text is present
+            # (e.g. model exhausted tokens during reasoning before emitting final response field)
+            if not effective_text and thinking_text:
+                logger.warning(
+                    f"Model '{self.model_id}' final response field was empty; attempting fallback extraction from thinking tokens."
+                )
+                # Try to extract MCQ letter or option statement from reasoning chain
+                match = re.search(
+                    r"(?:answer|option|choice|conclusion|is)\s*[:=\-]?\s*\(?([A-Da-d])\)?(?:\.|\b|$)",
+                    thinking_text,
+                    re.IGNORECASE,
+                )
+                if match:
+                    effective_text = match.group(1).upper()
+                else:
+                    # Take last meaningful non-empty line of thinking as the answer candidate
+                    lines = [ln.strip() for ln in thinking_text.splitlines() if ln.strip()]
+                    effective_text = lines[-1] if lines else thinking_text
+
+            has_thinking = bool(thinking_text or "<think>" in raw_response)
 
             prompt_tokens = data.get("prompt_eval_count")
             generated_tokens = data.get("eval_count")
@@ -360,8 +393,11 @@ class OllamaModelAdapter(BaseModelAdapter):
                     "runtime": "ollama",
                     "quantization": "4-bit (q4_K_M)",
                     "tokens_per_second": tok_per_sec,
-                    "raw_response": reply_text,
-                    "has_thinking_tags": "<think>" in reply_text,
+                    "raw_response": raw_response,
+                    "thinking": thinking_text,
+                    "has_thinking": has_thinking,
+                    "has_thinking_tags": "<think>" in raw_response,
+                    "done_reason": data.get("done_reason"),
                     "total_duration_ns": data.get("total_duration"),
                     "load_duration_ns": data.get("load_duration"),
                 },

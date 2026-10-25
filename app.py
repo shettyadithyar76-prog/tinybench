@@ -1007,7 +1007,7 @@ if nav_choice == "Overview":
                 dataset_path="datasets/basic_v1.jsonl",
                 model_name=quick_target,
                 limit=5,
-                generation_config=GenerationConfig(max_new_tokens=32, temperature=0.0),
+                generation_config=GenerationConfig(max_new_tokens=384, temperature=0.0),
                 output_dir=str(STORAGE_DIR),
             )
             with st.spinner("Executing benchmark tasks..."):
@@ -1136,7 +1136,7 @@ elif nav_choice == "Run Benchmark":
 
         st.markdown("#### 03. Hyperparameters")
         with st.expander("⚙️ Execution Hyperparameters", expanded=False):
-            max_tokens = st.slider("Max New Tokens", min_value=8, max_value=256, value=64, step=8)
+            max_tokens = st.slider("Max New Tokens", min_value=16, max_value=1024, value=384, step=16)
             temperature = st.slider("Temperature (0.0 = Deterministic Greedy)", min_value=0.0, max_value=1.5, value=0.0, step=0.1)
             seed = st.number_input("Random Seed", value=42)
 
@@ -1468,6 +1468,12 @@ elif nav_choice == "Run Details":
                     with ce:
                         st.markdown("**Model Output:**")
                         st.code(t.generated_text if t.generated_text else "(empty output)", language="text")
+                        if getattr(t, "thinking_text", None):
+                            with st.expander("🧠 View Chain-of-Thought (Reasoning)"):
+                                st.markdown(
+                                    f"<div style='font-family: monospace; font-size: 0.8rem; background: var(--surface-nested); padding: 10px; border-radius: 6px; white-space: pre-wrap; max-height: 250px; overflow-y: auto; color: var(--text-secondary);'>{t.thinking_text}</div>",
+                                    unsafe_allow_html=True,
+                                )
                         st.markdown(
                             f"- Exact Match: `{'Yes' if t.exact_match else 'No'}`\n"
                             f"- Compliance Score: `{t.compliance_score:.2f}`\n"

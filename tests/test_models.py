@@ -191,3 +191,65 @@ def test_mock_metadata():
     assert meta.license == "MIT"
     assert meta.license_is_osi_approved is True
     assert meta.estimated_ram_mb > 0
+
+
+def test_ollama_reasoning_and_thinking_extraction(monkeypatch):
+    """Verify Ollama adapter extracts thinking and handles reasoning fallbacks safely."""
+    import json
+    import io
+
+    adapter = OllamaModelAdapter(model_id="deepseek-r1:1.5b", base_url="http://127.0.0.1:11434")
+    adapter._is_loaded = True
+
+    # Case 1: Normal reasoning model completion (thinking + final answer)
+    fake_data_1 = {
+        "response": "A",
+        "thinking": "The user is asking for the speed of light. Option A is 300,000 km/s.",
+        "prompt_eval_count": 20,
+        "eval_count": 250,
+        "done_reason": "stop",
+    }
+
+    class MockResp:
+        def __init__(self, data):
+            self.status = 200
+            self._bytes = json.dumps(data).encode("utf-8")
+        def read(self):
+            return self._bytes
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=120.0: MockResp(fake_data_1))
+    res1 = adapter.generate("Speed of light?", GenerationConfig(max_new_tokens=64))
+    assert res1.text == "A"
+    assert res1.metadata["thinking"] == fake_data_1["thinking"]
+    assert res1.metadata["has_thinking"] is True
+
+    # Case 2: Length cutoff with empty response field; fallback extracts option from thinking tokens
+    fake_data_2 = {
+        "response": "",
+        "thinking": "1. Understand prompt.\n2. Calculate.\nTherefore, the correct choice is B.",
+        "prompt_eval_count": 20,
+        "eval_count": 64,
+        "done_reason": "length",
+    }
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=120.0: MockResp(fake_data_2))
+    res2 = adapter.generate("Math problem?", GenerationConfig(max_new_tokens=64))
+    assert res2.text == "B"
+    assert res2.metadata["thinking"] == fake_data_2["thinking"]
+
+    # Case 3: Embedded unclosed <think> tag in response is cleanly sanitized
+    fake_data_3 = {
+        "response": "<think>Drafting thoughts\nParis",
+        "thinking": "",
+        "prompt_eval_count": 10,
+        "eval_count": 30,
+        "done_reason": "stop",
+    }
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=120.0: MockResp(fake_data_3))
+    res3 = adapter.generate("Capital of France?", GenerationConfig(max_new_tokens=64))
+    assert "Paris" in res3.text
+    assert "<think>" not in res3.text
+
