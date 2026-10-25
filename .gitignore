@@ -36,6 +36,9 @@ runs/*.json
 runs/*.csv
 runs/*.db
 !runs/.gitkeep
+!runs/runs.db
+!runs/run_20261025_235329_aff79d.json
+!runs/run_20261026_002013_6f139a.json
 
 # Model cache & checkpoints
 hf_models/
@@ -43,7 +46,8 @@ checkpoints/
 .cache/
 
 # Streamlit
-.streamlit/
+.streamlit/*
+!.streamlit/config.toml
 
 # IDE & OS
 .vscode/

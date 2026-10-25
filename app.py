@@ -13,43 +13,64 @@ import json
 import os
 import sys
 import time
+import traceback
 from pathlib import Path
 from typing import Any
 
-# Ensure src/ is on sys.path
+# Ensure src/ and repo root are on sys.path
 current_dir = Path(__file__).resolve().parent
 src_dir = current_dir / "src"
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
 
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 
-from tinybench.benchmarks.loader import load_dataset
-from tinybench.benchmarks.schema import TaskCategory
-from tinybench.benchmarks.validator import validate_dataset_file
-from tinybench.config import BenchmarkConfig, GenerationConfig, SystemInfo
-from tinybench.models.downloader import download_model, is_model_installed
-from tinybench.models.ollama_backend import check_ollama_daemon
-from tinybench.models.registry import APPROVED_MODEL_IDS, ModelRegistry
-from tinybench.reporting import export_run_csv, generate_comparison_table
-from tinybench.runner import BenchmarkRunner, RunResult, TaskResult
-from tinybench.storage import RunDatabase
-
-# Initialize storage directory
-STORAGE_DIR = current_dir / "runs"
-STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-db = RunDatabase(STORAGE_DIR)
-
-# Page configuration
+# Page configuration (configured early to enable unmasked diagnostic display)
 st.set_page_config(
     page_title="TinyBench — LLM Benchmarking Studio",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+try:
+    import pandas as pd
+    import plotly.express as px
+    import plotly.graph_objects as go
+
+    from tinybench.benchmarks.loader import load_dataset
+    from tinybench.benchmarks.schema import TaskCategory
+    from tinybench.benchmarks.validator import validate_dataset_file
+    from tinybench.config import BenchmarkConfig, GenerationConfig, SystemInfo
+    from tinybench.models.downloader import download_model, is_model_installed
+    from tinybench.models.ollama_backend import check_ollama_daemon
+    from tinybench.models.registry import APPROVED_MODEL_IDS, ModelRegistry
+    from tinybench.reporting import export_run_csv, generate_comparison_table
+    from tinybench.runner import BenchmarkRunner, RunResult, TaskResult
+    from tinybench.storage import RunDatabase
+
+    # Initialize storage directory
+    STORAGE_DIR = current_dir / "runs"
+    STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    db = RunDatabase(STORAGE_DIR)
+except Exception as startup_err:
+    st.error("### ⚠️ TinyBench Startup / Import Error Encountered")
+    st.markdown(
+        f"**Failed to import TinyBench modules or dependencies:** `{type(startup_err).__name__}: {startup_err}`"
+    )
+    st.markdown("#### Full Diagnostic Traceback:")
+    st.code(traceback.format_exc(), language="python")
+    st.markdown("#### System & Environment Information:")
+    st.json({
+        "python_version": sys.version,
+        "platform": sys.platform,
+        "current_dir": str(current_dir),
+        "src_dir": str(src_dir),
+        "sys_path": sys.path[:6],
+    })
+    st.stop()
 
 # Initialize theme state
 if "dark_mode" not in st.session_state:
@@ -1718,6 +1739,9 @@ elif nav_choice == "05. Models & Datasets" or nav_choice == "Models & Datasets":
                 status_color = "var(--kpi-mint-text)" if m.status == "available" else ("var(--kpi-butter-text)" if m.status == "requires_access_approval" else "var(--kpi-rose-text)")
                 badge_style = "badge-mint" if m.status == "available" else ("badge-butter" if m.status == "requires_access_approval" else "badge-rose")
                 status_label = "AVAILABLE" if m.status == "available" else ("APPROVAL REQUIRED" if m.status == "requires_access_approval" else "UNAVAILABLE")
+                m_min_ram = f"{getattr(m, 'minimum_ram_mb', 2000.0):.0f}"
+                m_rec_ram = f"{getattr(m, 'recommended_ram_mb', 4000.0):.0f}"
+                m_verified = getattr(m, 'verification_timestamp', 'Pre-configured')
 
                 st.markdown(
                     f"""

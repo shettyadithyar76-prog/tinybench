@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 from tinybench.benchmarks.validator import validate_dataset_file
 from tinybench.config import BenchmarkConfig, GenerationConfig
@@ -146,7 +146,7 @@ def handle_list_models() -> int:
     print("=" * 115)
     print("Exact approved upstream identifiers:")
     for m in models:
-        print(f"  • {m.model_name}: {m.model_id} ({m.license_url})")
+        print(f"  * {m.model_name}: {m.model_id} ({m.license_url})")
     print("=" * 115 + "\n")
     return 0
 
@@ -222,7 +222,7 @@ def handle_evaluate(args: argparse.Namespace) -> int:
     is_demo_mode = model_name.startswith("mock")
     if is_demo_mode:
         print("\n" + "!" * 70)
-        print("⚠️ [NOTICE] Executing in DEMO / SIMULATED DATA mode.")
+        print("[NOTICE] Executing in DEMO / SIMULATED DATA mode.")
         print("Results will be flagged as simulated data and excluded from real comparisons.")
         print("!" * 70 + "\n")
     elif not ModelRegistry.is_approved_model(model_name):
@@ -388,7 +388,7 @@ def handle_history(args: argparse.Namespace) -> int:
     print(fmt.format("Run ID", "Model", "Data Mode", "Dataset", "Examples", "Accuracy", "Median Lat"))
     print("-" * 120)
     for r in runs:
-        mode_str = "🧪 Demo" if r.get("is_demo") else "🧠 Verified"
+        mode_str = "[Demo]" if r.get("is_demo") else "[Verified]"
         print(fmt.format(
             r["run_id"][:27],
             r["model_name"][:23],

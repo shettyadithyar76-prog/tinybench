@@ -1,0 +1,168 @@
+{
+  "run_id": "run_20261025_235329_aff79d",
+  "timestamp": "2026-10-25T18:23:29.685736+00:00",
+  "model_metadata": {
+    "model_id": "gemma4:e2b",
+    "model_name": "Gemma 4 E2B",
+    "family": "Gemma 4",
+    "developer": "Google DeepMind",
+    "parameters": "2B effective",
+    "variant": "E2B (Edge Multimodal)",
+    "license": "Apache-2.0",
+    "license_url": "https://gemma.ai/models/gemma-4/",
+    "license_is_osi_approved": true,
+    "supported_runtime": "ollama",
+    "runtime_model_id": "gemma4:e2b",
+    "weight_formats": [
+      "Ollama blob",
+      "GGUF"
+    ],
+    "downloadable_artifacts": [
+      "gemma4:e2b (Ollama manifest & Q4_K_M blob)"
+    ],
+    "download_size": "1.8 GB",
+    "quantization": "4-bit (q4_K_M)",
+    "minimum_ram_mb": 1800.0,
+    "recommended_ram_mb": 2500.0,
+    "estimated_ram_mb": 2500.0,
+    "status": "available",
+    "status_reason": "Model is installed locally in Ollama and ready for CPU benchmarking.",
+    "source_links": [
+      "https://ollama.com/library/gemma4",
+      "https://gemma.ai/models/gemma-4/"
+    ],
+    "verification_timestamp": "2026-10-25T20:30:00Z",
+    "backend_type": "ollama",
+    "revision": null,
+    "description": "Google DeepMind's ultra-efficient 2B edge model with native audio/vision understanding and extended context, built for low-resource deployment."
+  },
+  "dataset_name": "basic_v1.jsonl",
+  "dataset_path": "datasets\\basic_v1.jsonl",
+  "generation_config": {
+    "max_new_tokens": 64,
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "seed": 42,
+    "stop_sequences": []
+  },
+  "system_info": {
+    "os_name": "Windows",
+    "os_version": "10.0.26300",
+    "architecture": "AMD64",
+    "processor": "Intel64 Family 6 Model 142 Stepping 12, GenuineIntel",
+    "cpu_physical_cores": 4,
+    "cpu_logical_cores": 8,
+    "total_ram_mb": 12048.69,
+    "available_ram_mb": 5475.78,
+    "python_version": "3.14.6",
+    "torch_version": "2.14.1+cpu",
+    "transformers_version": "5.20.2"
+  },
+  "total_examples": 3,
+  "successful_examples": 3,
+  "failed_examples": 0,
+  "accuracy": 0.0,
+  "exact_match_rate": 0.0,
+  "avg_compliance_score": 1.0,
+  "latency_summary": {
+    "init_latency_seconds": 14.6477,
+    "first_generation_latency_seconds": 9.2187,
+    "mean_latency_seconds": 8.83,
+    "median_latency_seconds": 9.2187,
+    "p95_latency_seconds": 9.2187,
+    "min_latency_seconds": 7.7029,
+    "max_latency_seconds": 9.5685,
+    "total_generation_seconds": 26.4901,
+    "successful_count": 3,
+    "failed_count": 0
+  },
+  "memory_measurement": {
+    "initial_rss_mb": 41.71,
+    "peak_rss_mb": 41.8,
+    "final_rss_mb": 41.74,
+    "memory_delta_mb": 0.09,
+    "measurement_method": "psutil.Process().memory_info().rss",
+    "notes": "Process Resident Set Size (RSS) captures physical memory currently allocated to the Python process. Note: Process RSS does not include system-wide page cache, GPU memory, or out-of-process driver allocations."
+  },
+  "category_metrics": {
+    "multiple_choice": {
+      "category": "multiple_choice",
+      "total": 3,
+      "correct": 0,
+      "accuracy": 0.0,
+      "exact_match_rate": 0.0,
+      "avg_compliance_score": 1.0,
+      "mean_latency_seconds": 8.83
+    }
+  },
+  "task_results": [
+    {
+      "task_id": "mcq_01",
+      "category": "multiple_choice",
+      "prompt": "What is the speed of light in a vacuum?\nA) 300,000 km/s\nB) 150,000 km/s\nC) 1,000,000 km/s\nD) 30,000 km/s\nAnswer with the option letter.",
+      "expected_answer": "A",
+      "generated_text": "",
+      "is_correct": false,
+      "exact_match": false,
+      "compliance_score": 1.0,
+      "compliance_details": {},
+      "latency_seconds": 9.2187,
+      "prompt_tokens": 90,
+      "generated_tokens": 64,
+      "error": null
+    },
+    {
+      "task_id": "mcq_02",
+      "category": "multiple_choice",
+      "prompt": "Which is the largest ocean on Earth?\nA) Atlantic Ocean\nB) Indian Ocean\nC) Arctic Ocean\nD) Pacific Ocean\nAnswer with the option letter.",
+      "expected_answer": "D",
+      "generated_text": "",
+      "is_correct": false,
+      "exact_match": false,
+      "compliance_score": 1.0,
+      "compliance_details": {},
+      "latency_seconds": 7.7029,
+      "prompt_tokens": 51,
+      "generated_tokens": 64,
+      "error": null
+    },
+    {
+      "task_id": "mcq_03",
+      "category": "multiple_choice",
+      "prompt": "What is the average time complexity of searching in a balanced binary search tree?\nA) O(1)\nB) O(log n)\nC) O(n)\nD) O(n log n)\nAnswer with the option letter.",
+      "expected_answer": "B",
+      "generated_text": "",
+      "is_correct": false,
+      "exact_match": false,
+      "compliance_score": 1.0,
+      "compliance_details": {},
+      "latency_seconds": 9.5685,
+      "prompt_tokens": 69,
+      "generated_tokens": 64,
+      "error": null
+    }
+  ],
+  "is_demo": false,
+  "runtime_version": "Ollama 0.40.11 active",
+  "provenance": {
+    "model_id": "gemma4:e2b",
+    "model_name": "Gemma 4 E2B",
+    "developer": "Google DeepMind",
+    "parameters": "2B effective",
+    "variant": "E2B (Edge Multimodal)",
+    "quantization": "4-bit (q4_K_M)",
+    "weight_formats": [
+      "Ollama blob",
+      "GGUF"
+    ],
+    "runtime": "ollama",
+    "runtime_version": "Ollama 0.40.11 active",
+    "os": "Windows (AMD64)",
+    "cpu": "Intel64 Family 6 Model 142 Stepping 12, GenuineIntel",
+    "cores": "4 Physical / 8 Threads",
+    "dataset": "basic_v1.jsonl",
+    "max_new_tokens": 64,
+    "temperature": 0.0,
+    "is_demo": false
+  }
+}
