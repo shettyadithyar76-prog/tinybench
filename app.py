@@ -190,6 +190,47 @@ st.markdown(
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     }}
 
+    /* Header & Top App Toolbar / Tools */
+    header[data-testid="stHeader"],
+    .stAppHeader,
+    [data-testid="stHeader"],
+    div[data-testid="stToolbar"],
+    div[data-testid="stHeaderActionElements"],
+    div[data-testid="collapsedControl"] {{
+        background-color: var(--surface-app) !important;
+        background: var(--surface-app) !important;
+        color: var(--text-primary) !important;
+        border-bottom: 1px solid var(--border-subtle) !important;
+    }}
+
+    /* Top decoration bar */
+    div[data-testid="stDecoration"] {{
+        background-image: linear-gradient(90deg, var(--tag-color), var(--btn-primary-bg)) !important;
+        background-color: var(--surface-app) !important;
+        height: 3px !important;
+    }}
+
+    /* Header action buttons, icons, SVGs, and status widgets */
+    header[data-testid="stHeader"] button,
+    header[data-testid="stHeader"] svg,
+    header[data-testid="stHeader"] span,
+    header[data-testid="stHeader"] div,
+    [data-testid="stToolbar"] button,
+    [data-testid="stToolbar"] svg,
+    [data-testid="stStatusWidget"] *,
+    div[data-testid="stSidebarCollapseButton"] button,
+    div[data-testid="stSidebarCollapseButton"] svg {{
+        color: var(--text-primary) !important;
+        fill: var(--text-primary) !important;
+    }}
+
+    header[data-testid="stHeader"] button:hover,
+    [data-testid="stToolbar"] button:hover,
+    div[data-testid="stSidebarCollapseButton"] button:hover {{
+        background-color: var(--surface-nested) !important;
+        color: var(--tag-color) !important;
+    }}
+
     /* All Headings & Titles */
     h1, h2, h3, h4, h5, h6,
     div[data-testid="stMarkdownContainer"] h1,
