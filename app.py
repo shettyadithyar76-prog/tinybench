@@ -815,7 +815,7 @@ if nav_choice == "Overview":
         st.markdown(
             f"""
             <div class="kpi-card kpi-card-lilac">
-                <div class="kpi-title" style="color: var(--kpi-lilac-text);">Mean Latency</div>
+                <div class="kpi-title" style="color: var(--kpi-lilac-text);">Median Latency</div>
                 <div class="kpi-value" style="color: var(--kpi-lilac-text);">{lat_str}</div>
                 <div class="kpi-sub" style="color: var(--kpi-lilac-sub);">p95: 58 ms (TTFT)</div>
             </div>
@@ -1200,7 +1200,7 @@ elif nav_choice == "Run Details":
                 st.markdown(
                     f"""
                     <div class="kpi-card kpi-card-lilac">
-                        <div class="kpi-title" style="color: var(--kpi-lilac-text);">Mean Latency</div>
+                        <div class="kpi-title" style="color: var(--kpi-lilac-text);">Median Latency</div>
                         <div class="kpi-value" style="color: var(--kpi-lilac-text);">{run_res.latency_summary.median_latency_seconds * 1000:.0f} ms</div>
                         <div class="kpi-sub" style="color: var(--kpi-lilac-sub);">CPU wall-clock</div>
                     </div>
@@ -1212,7 +1212,7 @@ elif nav_choice == "Run Details":
                     f"""
                     <div class="kpi-card kpi-card-butter">
                         <div class="kpi-title" style="color: var(--kpi-butter-text);">Peak RAM</div>
-                        <div class="kpi-value" style="color: var(--kpi-butter-text);">{run_res.peak_memory_mb:.1f} MB</div>
+                        <div class="kpi-value" style="color: var(--kpi-butter-text);">{run_res.memory_measurement.peak_rss_mb:.1f} MB</div>
                         <div class="kpi-sub" style="color: var(--kpi-butter-sub);">Resident memory size</div>
                     </div>
                     """,
@@ -1315,6 +1315,9 @@ elif nav_choice == "Run Details":
                 filtered_tasks = [t for t in filtered_tasks if t.error]
 
             st.caption(f"Displaying {len(filtered_tasks)} of {len(run_res.task_results)} evaluated tasks.")
+
+            if not filtered_tasks:
+                st.info("No tasks match the selected filter criteria.")
 
             for t in filtered_tasks:
                 status_badge = (
@@ -1457,7 +1460,12 @@ elif nav_choice == "Model Comparison":
             st.warning("Please select at least 2 runs to display side-by-side comparisons.")
         else:
             selected_ids = [run_options[l] for l in selected_runs_labels]
-            selected_run_objects = [db.get_run(rid) for rid in selected_ids if db.get_run(rid)]
+            loaded_runs = [db.get_run(rid) for rid in selected_ids]
+            selected_run_objects = [r for r in loaded_runs if r is not None]
+
+            if len(selected_run_objects) < 2:
+                st.error("Could not load full artifacts for at least 2 of the selected runs. Please select different runs.")
+                st.stop()
 
             st.markdown(
                 """
@@ -1499,7 +1507,7 @@ elif nav_choice == "Model Comparison":
                             </div>
                             <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; text-align: center;">
                                 <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">RAM</div>
-                                <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{run_a.peak_memory_mb:.1f} MB</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{run_a.memory_measurement.peak_rss_mb:.1f} MB</div>
                             </div>
                         </div>
                     </div>
@@ -1529,7 +1537,7 @@ elif nav_choice == "Model Comparison":
                             </div>
                             <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; text-align: center;">
                                 <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">RAM</div>
-                                <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{run_b.peak_memory_mb:.1f} MB</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{run_b.memory_measurement.peak_rss_mb:.1f} MB</div>
                             </div>
                         </div>
                     </div>
@@ -1625,9 +1633,24 @@ elif nav_choice == "Model Comparison":
                 st.markdown("</div>", unsafe_allow_html=True)
 
 
+            st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+            st.markdown("### 📋 Cross-Model Comparison Table")
+            st.dataframe(df_comp, use_container_width=True, hide_index=True)
+
+            st.download_button(
+                "📥 Export Comparison Table (CSV)",
+                data=df_comp.to_csv(index=False),
+                file_name="tinybench_model_comparison.csv",
+                mime="text/csv",
+                use_container_width=False,
+            )
+
+
 # ==============================================================================
 # SCREEN 5: MODELS & DATASETS REGISTRY
 # ==============================================================================
+
+
 elif nav_choice == "05. Models & Datasets" or nav_choice == "Models & Datasets":
     st.markdown(
         """
