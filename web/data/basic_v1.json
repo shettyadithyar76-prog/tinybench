@@ -1,0 +1,532 @@
+[
+  {
+    "task_id": "mcq_01",
+    "category": "multiple_choice",
+    "prompt": "What is the speed of light in a vacuum?\nA) 300,000 km/s\nB) 150,000 km/s\nC) 1,000,000 km/s\nD) 30,000 km/s\nAnswer with the option letter.",
+    "expected_answer": "A",
+    "scoring_method": "multiple_choice",
+    "metadata": {
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "correct_option": "A",
+      "full_answer": "300,000 km/s"
+    },
+    "description": "Physics basic constant MCQ"
+  },
+  {
+    "task_id": "mcq_02",
+    "category": "multiple_choice",
+    "prompt": "Which is the largest ocean on Earth?\nA) Atlantic Ocean\nB) Indian Ocean\nC) Arctic Ocean\nD) Pacific Ocean\nAnswer with the option letter.",
+    "expected_answer": "D",
+    "scoring_method": "multiple_choice",
+    "metadata": {
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "correct_option": "D",
+      "full_answer": "Pacific Ocean"
+    },
+    "description": "Geography largest ocean MCQ"
+  },
+  {
+    "task_id": "mcq_03",
+    "category": "multiple_choice",
+    "prompt": "What is the average time complexity of searching in a balanced binary search tree?\nA) O(1)\nB) O(log n)\nC) O(n)\nD) O(n log n)\nAnswer with the option letter.",
+    "expected_answer": "B",
+    "scoring_method": "multiple_choice",
+    "metadata": {
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "correct_option": "B",
+      "full_answer": "O(log n)"
+    },
+    "description": "Computer science binary search complexity"
+  },
+  {
+    "task_id": "mcq_04",
+    "category": "multiple_choice",
+    "prompt": "Which cellular organelle is known as the powerhouse of the cell?\nA) Nucleus\nB) Ribosome\nC) Mitochondria\nD) Endoplasmic reticulum\nAnswer with the option letter.",
+    "expected_answer": "C",
+    "scoring_method": "multiple_choice",
+    "metadata": {
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "correct_option": "C",
+      "full_answer": "Mitochondria"
+    },
+    "description": "Biology cellular organelle MCQ"
+  },
+  {
+    "task_id": "mcq_05",
+    "category": "multiple_choice",
+    "prompt": "What is the SI unit of electrical resistance?\nA) Volt\nB) Ampere\nC) Watt\nD) Ohm\nAnswer with the option letter.",
+    "expected_answer": "D",
+    "scoring_method": "multiple_choice",
+    "metadata": {
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "correct_option": "D",
+      "full_answer": "Ohm"
+    },
+    "description": "Physics SI units MCQ"
+  },
+  {
+    "task_id": "mcq_06",
+    "category": "multiple_choice",
+    "prompt": "What is the chemical symbol for Gold?\nA) Ag\nB) Au\nC) Fe\nD) Pb\nAnswer with the option letter.",
+    "expected_answer": "B",
+    "scoring_method": "multiple_choice",
+    "metadata": {
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "correct_option": "B",
+      "full_answer": "Au"
+    },
+    "description": "Chemistry element symbol MCQ"
+  },
+  {
+    "task_id": "mcq_07",
+    "category": "multiple_choice",
+    "prompt": "Which gas makes up the greatest percentage of Earth's atmosphere?\nA) Oxygen\nB) Carbon Dioxide\nC) Nitrogen\nD) Argon\nAnswer with the option letter.",
+    "expected_answer": "C",
+    "scoring_method": "multiple_choice",
+    "metadata": {
+      "options": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "correct_option": "C",
+      "full_answer": "Nitrogen"
+    },
+    "description": "Atmospheric science gas composition MCQ"
+  },
+  {
+    "task_id": "fact_01",
+    "category": "factual_qa",
+    "prompt": "What is the capital city of France? Answer with only the name of the city.",
+    "expected_answer": "Paris",
+    "scoring_method": "exact_match",
+    "metadata": {
+      "aliases": [
+        "paris",
+        "city of paris"
+      ]
+    },
+    "description": "World capitals factual question"
+  },
+  {
+    "task_id": "fact_02",
+    "category": "factual_qa",
+    "prompt": "Who was the first person to walk on the Moon? Answer with the full name.",
+    "expected_answer": "Neil Armstrong",
+    "scoring_method": "exact_match",
+    "metadata": {
+      "aliases": [
+        "neil armstrong",
+        "armstrong"
+      ]
+    },
+    "description": "Space exploration history question"
+  },
+  {
+    "task_id": "fact_03",
+    "category": "factual_qa",
+    "prompt": "How many continents are there on Earth according to the standard model? Answer with just the number.",
+    "expected_answer": "7",
+    "scoring_method": "exact_match",
+    "metadata": {
+      "aliases": [
+        "7",
+        "seven"
+      ]
+    },
+    "description": "Earth geography factual question"
+  },
+  {
+    "task_id": "fact_04",
+    "category": "factual_qa",
+    "prompt": "What is the boiling point of water in degrees Celsius at standard atmospheric pressure? Answer with just the number.",
+    "expected_answer": "100",
+    "scoring_method": "exact_match",
+    "metadata": {
+      "aliases": [
+        "100",
+        "100 C",
+        "100 celsius"
+      ]
+    },
+    "description": "Science boiling point question"
+  },
+  {
+    "task_id": "fact_05",
+    "category": "factual_qa",
+    "prompt": "Who wrote the play 'Romeo and Juliet'? Answer with the author's name.",
+    "expected_answer": "William Shakespeare",
+    "scoring_method": "exact_match",
+    "metadata": {
+      "aliases": [
+        "william shakespeare",
+        "shakespeare"
+      ]
+    },
+    "description": "Literature historical author question"
+  },
+  {
+    "task_id": "fact_06",
+    "category": "factual_qa",
+    "prompt": "What is the official currency of Japan? Answer with only the currency name.",
+    "expected_answer": "Yen",
+    "scoring_method": "exact_match",
+    "metadata": {
+      "aliases": [
+        "yen",
+        "japanese yen",
+        "jpy"
+      ]
+    },
+    "description": "Economics currency factual question"
+  },
+  {
+    "task_id": "fact_07",
+    "category": "factual_qa",
+    "prompt": "Which planet in our solar system is the largest by mass and volume? Answer with only the planet name.",
+    "expected_answer": "Jupiter",
+    "scoring_method": "exact_match",
+    "metadata": {
+      "aliases": [
+        "jupiter"
+      ]
+    },
+    "description": "Astronomy largest planet question"
+  },
+  {
+    "task_id": "math_01",
+    "category": "arithmetic_reasoning",
+    "prompt": "Sarah has 15 apples. She purchases 27 more apples at the market. How many apples does Sarah have now? Answer with only the number.",
+    "expected_answer": 42,
+    "scoring_method": "numeric",
+    "metadata": {
+      "tolerance": 0.0
+    },
+    "description": "Single-step addition word problem"
+  },
+  {
+    "task_id": "math_02",
+    "category": "arithmetic_reasoning",
+    "prompt": "What is 12 multiplied by 8? Answer with only the number.",
+    "expected_answer": 96,
+    "scoring_method": "numeric",
+    "metadata": {
+      "tolerance": 0.0
+    },
+    "description": "Direct integer multiplication"
+  },
+  {
+    "task_id": "math_03",
+    "category": "arithmetic_reasoning",
+    "prompt": "A train travels 240 miles in 4 hours at constant speed. What is the train's speed in miles per hour? Answer with only the number.",
+    "expected_answer": 60,
+    "scoring_method": "numeric",
+    "metadata": {
+      "tolerance": 0.0
+    },
+    "description": "Speed distance time division problem"
+  },
+  {
+    "task_id": "math_04",
+    "category": "arithmetic_reasoning",
+    "prompt": "What is 25 percent of 200? Answer with only the number.",
+    "expected_answer": 50,
+    "scoring_method": "numeric",
+    "metadata": {
+      "tolerance": 0.0
+    },
+    "description": "Percentage calculation problem"
+  },
+  {
+    "task_id": "math_05",
+    "category": "arithmetic_reasoning",
+    "prompt": "A box contains 5 red balls and 7 blue balls. A person removes 3 red balls. How many total balls remain in the box? Answer with only the number.",
+    "expected_answer": 9,
+    "scoring_method": "numeric",
+    "metadata": {
+      "tolerance": 0.0
+    },
+    "description": "Two-step inventory reasoning problem"
+  },
+  {
+    "task_id": "math_06",
+    "category": "arithmetic_reasoning",
+    "prompt": "Solve for x: 3x + 6 = 24. What is the value of x? Answer with only the number.",
+    "expected_answer": 6,
+    "scoring_method": "numeric",
+    "metadata": {
+      "tolerance": 0.0
+    },
+    "description": "Basic linear equation solving"
+  },
+  {
+    "task_id": "math_07",
+    "category": "arithmetic_reasoning",
+    "prompt": "What is the perimeter of a rectangle that has a length of 10 units and a width of 4 units? Answer with only the number.",
+    "expected_answer": 28,
+    "scoring_method": "numeric",
+    "metadata": {
+      "tolerance": 0.0
+    },
+    "description": "Rectangle perimeter calculation"
+  },
+  {
+    "task_id": "inst_01",
+    "category": "instruction_following",
+    "prompt": "Describe the clear daytime sky in exactly three words. Provide only those three words and no punctuation or extra text.",
+    "expected_answer": "blue vast bright",
+    "scoring_method": "instruction_compliance",
+    "metadata": {
+      "exact_word_count": 3
+    },
+    "description": "Exact word count constraint"
+  },
+  {
+    "task_id": "inst_02",
+    "category": "instruction_following",
+    "prompt": "Explain what water is in a short sentence without using the words 'liquid' or 'drink'.",
+    "expected_answer": "Water is a chemical compound of hydrogen and oxygen essential for life.",
+    "scoring_method": "instruction_compliance",
+    "metadata": {
+      "forbidden_keywords": [
+        "liquid",
+        "drink"
+      ],
+      "max_words": 20
+    },
+    "description": "Forbidden keywords constraint"
+  },
+  {
+    "task_id": "inst_03",
+    "category": "instruction_following",
+    "prompt": "What is the capital of Spain? Start your response with 'Answer: ' and provide only the city name.",
+    "expected_answer": "Answer: Madrid",
+    "scoring_method": "instruction_compliance",
+    "metadata": {
+      "starts_with": "Answer: ",
+      "required_keywords": [
+        "Madrid"
+      ]
+    },
+    "description": "Required prefix and answer keyword constraint"
+  },
+  {
+    "task_id": "inst_04",
+    "category": "instruction_following",
+    "prompt": "Name the color of a ripe banana. Write your entire response in ALL UPPERCASE letters.",
+    "expected_answer": "YELLOW",
+    "scoring_method": "instruction_compliance",
+    "metadata": {
+      "must_be_uppercase": true,
+      "required_keywords": [
+        "YELLOW"
+      ]
+    },
+    "description": "Uppercase formatting constraint"
+  },
+  {
+    "task_id": "inst_05",
+    "category": "instruction_following",
+    "prompt": "Write a single sentence about summer that includes both the word 'sunshine' and the word 'beach'.",
+    "expected_answer": "We enjoyed warm sunshine while walking along the sandy beach.",
+    "scoring_method": "instruction_compliance",
+    "metadata": {
+      "required_keywords": [
+        "sunshine",
+        "beach"
+      ],
+      "max_words": 25
+    },
+    "description": "Multiple required keywords constraint"
+  },
+  {
+    "task_id": "inst_06",
+    "category": "instruction_following",
+    "prompt": "List three prime numbers between 10 and 20 as a numbered list with format 1. 2. 3.",
+    "expected_answer": "1. 11\n2. 13\n3. 17",
+    "scoring_method": "instruction_compliance",
+    "metadata": {
+      "required_keywords": [
+        "1.",
+        "2.",
+        "3."
+      ],
+      "forbidden_keywords": [
+        "15",
+        "16",
+        "18"
+      ]
+    },
+    "description": "Numbered list formatting constraint"
+  },
+  {
+    "task_id": "inst_07",
+    "category": "instruction_following",
+    "prompt": "State the result of 5 plus 5. Your response must end with the exact word 'confirmed'.",
+    "expected_answer": "10 confirmed",
+    "scoring_method": "instruction_compliance",
+    "metadata": {
+      "ends_with": "confirmed",
+      "required_keywords": [
+        "10"
+      ]
+    },
+    "description": "Ending keyword constraint"
+  },
+  {
+    "task_id": "struct_01",
+    "category": "structured_output",
+    "prompt": "Output a valid JSON object with the keys 'city' and 'country' for Tokyo. Output only the JSON object.",
+    "expected_answer": {
+      "city": "Tokyo",
+      "country": "Japan"
+    },
+    "scoring_method": "json_schema",
+    "metadata": {
+      "required_keys": [
+        "city",
+        "country"
+      ]
+    },
+    "description": "Basic key-value JSON generation"
+  },
+  {
+    "task_id": "struct_02",
+    "category": "structured_output",
+    "prompt": "Output a valid JSON object representing a book with the keys 'title', 'author', and 'year'. Output only valid JSON.",
+    "expected_answer": {
+      "title": "1984",
+      "author": "George Orwell",
+      "year": 1949
+    },
+    "scoring_method": "json_schema",
+    "metadata": {
+      "required_keys": [
+        "title",
+        "author",
+        "year"
+      ]
+    },
+    "description": "Three-field book metadata JSON generation"
+  },
+  {
+    "task_id": "struct_03",
+    "category": "structured_output",
+    "prompt": "Output a valid JSON object with keys 'movie' and 'rating' where rating is a number. Output only valid JSON.",
+    "expected_answer": {
+      "movie": "Inception",
+      "rating": 9
+    },
+    "scoring_method": "json_schema",
+    "metadata": {
+      "required_keys": [
+        "movie",
+        "rating"
+      ],
+      "key_types": {
+        "rating": "number"
+      }
+    },
+    "description": "Typed fields JSON generation"
+  },
+  {
+    "task_id": "struct_04",
+    "category": "structured_output",
+    "prompt": "Output a valid JSON array containing three primary colors as strings. Output only valid JSON.",
+    "expected_answer": [
+      "red",
+      "blue",
+      "yellow"
+    ],
+    "scoring_method": "json_schema",
+    "metadata": {
+      "is_array": true,
+      "min_items": 3
+    },
+    "description": "JSON array generation"
+  },
+  {
+    "task_id": "struct_05",
+    "category": "structured_output",
+    "prompt": "Output the capital of Canada in the exact format: KEY=VALUE. Use 'CAPITAL' as the key and the city name as the value.",
+    "expected_answer": "CAPITAL=Ottawa",
+    "scoring_method": "instruction_compliance",
+    "metadata": {
+      "starts_with": "CAPITAL=",
+      "required_keywords": [
+        "Ottawa"
+      ]
+    },
+    "description": "Key=Value configuration format"
+  },
+  {
+    "task_id": "struct_06",
+    "category": "structured_output",
+    "prompt": "Output a valid JSON object with keys 'status' (string) and 'code' (integer 200). Output only valid JSON.",
+    "expected_answer": {
+      "status": "ok",
+      "code": 200
+    },
+    "scoring_method": "json_schema",
+    "metadata": {
+      "required_keys": [
+        "status",
+        "code"
+      ]
+    },
+    "description": "HTTP status response JSON format"
+  },
+  {
+    "task_id": "struct_07",
+    "category": "structured_output",
+    "prompt": "Output a valid JSON object with keys 'name', 'age', and 'skills' where skills is an array of strings.",
+    "expected_answer": {
+      "name": "Alice",
+      "age": 28,
+      "skills": [
+        "python",
+        "machine learning"
+      ]
+    },
+    "scoring_method": "json_schema",
+    "metadata": {
+      "required_keys": [
+        "name",
+        "age",
+        "skills"
+      ]
+    },
+    "description": "Nested array field JSON generation"
+  }
+]
