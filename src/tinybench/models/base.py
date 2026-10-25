@@ -19,17 +19,32 @@ class GenerationResult(BaseModel):
 
 
 class ModelMetadata(BaseModel):
-    """Metadata describing a model architecture, origin, and resource profile."""
+    """Verified metadata describing a model architecture, origin, license, and resource profile."""
     model_id: str = Field(..., description="Canonical model identifier or registry key.")
-    model_name: str = Field(..., description="Human-readable model name.")
-    family: str = Field(..., description="Model family (e.g. SmolLM2, Qwen2.5, Mock).")
-    parameters: str = Field(..., description="Parameter count description (e.g. 135M, 0.5B).")
-    license: str = Field(..., description="License identifier (e.g. Apache-2.0).")
+    model_name: str = Field(..., description="Human-readable model display name.")
+    family: str = Field(..., description="Model family (e.g. Llama, SmolLM2, Gemma 4).")
+    developer: str = Field(default="Not verified", description="Developer or publisher organization.")
+    parameters: str = Field(..., description="Parameter count description (e.g. 1.23B, 1.71B, 2B effective).")
+    variant: str = Field(default="Instruct", description="Model variant or tuning tier.")
+    license: str = Field(..., description="Official license name.")
+    license_url: str = Field(default="Not verified", description="Direct URL to official license agreement.")
     license_is_osi_approved: bool = Field(
         default=False,
         description="Whether this license is recognized by the Open Source Initiative (OSI).",
     )
+    supported_runtime: str = Field(default="transformers_cpu", description="Supported execution runtime engine.")
+    runtime_model_id: str = Field(default="", description="Exact model identifier passed to the runtime.")
+    weight_formats: list[str] = Field(default_factory=list, description="Supported file/weight formats.")
+    downloadable_artifacts: list[str] = Field(default_factory=list, description="Verified downloadable artifacts.")
+    download_size: str = Field(default="Not verified", description="Verified download size on disk.")
+    quantization: str = Field(default="Not verified", description="Model quantization level.")
+    minimum_ram_mb: float = Field(default=2000.0, description="Minimum RAM required for inference in MB.")
+    recommended_ram_mb: float = Field(default=4000.0, description="Recommended RAM for comfortable inference in MB.")
     estimated_ram_mb: float = Field(..., description="Estimated RAM needed for CPU inference in MB.")
+    status: str = Field(default="available", description="Status: available, requires_access_approval, incompatible, or unavailable.")
+    status_reason: str | None = Field(default=None, description="Detailed explanation of status, blocker, or requirement.")
+    source_links: list[str] = Field(default_factory=list, description="Official model cards, docs, and repository links.")
+    verification_timestamp: str = Field(default="2026-10-25T20:30:00Z", description="Timestamp when metadata was verified.")
     backend_type: str = Field(..., description="Inference backend implementation type.")
     revision: str | None = Field(default=None, description="Model checkpoint commit hash or branch.")
     description: str = Field(..., description="Short explanation of model capabilities and architecture.")

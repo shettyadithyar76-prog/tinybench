@@ -132,10 +132,13 @@ def generate_comparison_table(results: list[RunResult]) -> list[dict[str, Any]]:
     """Produce standardized comparison records across multiple runs."""
     rows: list[dict[str, Any]] = []
     for r in results:
+        is_demo = getattr(r, "is_demo", False)
         rows.append({
             "Run ID": r.run_id,
+            "Data Mode": "🧪 Demo / Simulated" if is_demo else "🧠 Verified Real",
             "Model Name": r.model_metadata.model_name,
             "Model ID": r.model_metadata.model_id,
+            "Runtime": getattr(r, "runtime_version", None) or r.model_metadata.backend_type,
             "Dataset": r.dataset_name,
             "Total": r.total_examples,
             "Accuracy (%)": r.accuracy,

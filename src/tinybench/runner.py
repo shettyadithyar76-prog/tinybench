@@ -78,6 +78,9 @@ class RunResult(BaseModel):
     memory_measurement: MemoryMeasurement = Field(..., description="Process memory consumption.")
     category_metrics: dict[str, CategoryMetrics] = Field(default_factory=dict, description="Breakdown by category.")
     task_results: list[TaskResult] = Field(default_factory=list, description="Detailed per-task outcomes.")
+    is_demo: bool = Field(default=False, description="Whether this run was executed with a mock/simulated model.")
+    runtime_version: str | None = Field(default=None, description="Inference runtime engine version.")
+    provenance: dict[str, Any] = Field(default_factory=dict, description="Execution provenance and environment metadata.")
 
 
 class BenchmarkRunner:
@@ -175,8 +178,40 @@ class BenchmarkRunner:
         # 8. Compute per-category breakdown
         cat_metrics = self._compute_category_breakdown(task_results)
 
-        # 9. Capture system info
+        # 9. Capture system info & execution provenance
         sys_info = SystemInfo.capture()
+        is_demo = "mock" in adapter.model_id.lower() or model_meta.backend_type == "mock"
+
+        runtime_ver = "mock"
+        if model_meta.backend_type == "transformers_cpu":
+            try:
+                import transformers
+                runtime_ver = f"transformers {transformers.__version__}"
+            except Exception:
+                runtime_ver = "transformers"
+        elif model_meta.backend_type == "ollama":
+            from tinybench.models.ollama_backend import check_ollama_daemon
+            _, msg = check_ollama_daemon()
+            runtime_ver = msg
+
+        provenance = {
+            "model_id": model_meta.model_id,
+            "model_name": model_meta.model_name,
+            "developer": getattr(model_meta, "developer", "Not verified"),
+            "parameters": model_meta.parameters,
+            "variant": getattr(model_meta, "variant", "Instruct"),
+            "quantization": getattr(model_meta, "quantization", "Not verified"),
+            "weight_formats": getattr(model_meta, "weight_formats", []),
+            "runtime": model_meta.backend_type,
+            "runtime_version": runtime_ver,
+            "os": f"{sys_info.os_name} ({sys_info.architecture})",
+            "cpu": sys_info.processor,
+            "cores": f"{sys_info.cpu_physical_cores} Physical / {sys_info.cpu_logical_cores} Threads",
+            "dataset": dataset_path.name,
+            "max_new_tokens": self.config.generation_config.max_new_tokens,
+            "temperature": self.config.generation_config.temperature,
+            "is_demo": is_demo,
+        }
 
         result = RunResult(
             run_id=run_id,
@@ -196,6 +231,9 @@ class BenchmarkRunner:
             memory_measurement=mem_measurement,
             category_metrics=cat_metrics,
             task_results=task_results,
+            is_demo=is_demo,
+            runtime_version=runtime_ver,
+            provenance=provenance,
         )
 
         return result

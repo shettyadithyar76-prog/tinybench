@@ -11,6 +11,7 @@ import psutil
 
 from tinybench.config import GenerationConfig
 from tinybench.exceptions import (
+    GatedModelAccessError,
     ModelInferenceError,
     ModelLoadError,
     ResourceLimitError,
@@ -19,34 +20,60 @@ from tinybench.models.base import BaseModelAdapter, GenerationResult, ModelMetad
 
 logger = logging.getLogger(__name__)
 
-# Known metadata catalog for standard CPU-friendly open-weight models
+# Verified metadata catalog for approved Hugging Face open-weight models
 KNOWN_MODELS: dict[str, dict[str, Any]] = {
-    "HuggingFaceTB/SmolLM2-135M-Instruct": {
-        "model_name": "SmolLM2 135M Instruct",
-        "family": "SmolLM2",
-        "parameters": "135M",
-        "license": "Apache-2.0",
-        "license_is_osi_approved": True,
-        "estimated_ram_mb": 400.0,
-        "description": "Ultra-lightweight instruction-tuned model trained by Hugging Face on synthetic & curated tokens.",
+    "meta-llama/Llama-3.2-1B-Instruct": {
+        "model_name": "Llama 3.2 1B Instruct",
+        "family": "Llama",
+        "developer": "Meta AI",
+        "parameters": "1.23B",
+        "variant": "Instruct",
+        "license": "Llama 3.2 Community License",
+        "license_url": "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct/blob/main/LICENSE.txt",
+        "license_is_osi_approved": False,
+        "supported_runtime": "transformers_cpu",
+        "runtime_model_id": "meta-llama/Llama-3.2-1B-Instruct",
+        "weight_formats": ["safetensors"],
+        "downloadable_artifacts": ["model.safetensors (2.47 GB)", "config.json", "tokenizer.json", "generation_config.json"],
+        "download_size": "2.47 GB",
+        "quantization": "None (BF16 unquantized)",
+        "minimum_ram_mb": 2500.0,
+        "recommended_ram_mb": 3500.0,
+        "estimated_ram_mb": 3500.0,
+        "status": "requires_access_approval",
+        "status_reason": "Gated model. Requires accepting Meta's license at https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct and configuring HF_TOKEN environment variable.",
+        "source_links": [
+            "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct",
+            "https://llama.meta.com/",
+        ],
+        "verification_timestamp": "2026-10-25T20:30:00Z",
+        "description": "Meta's ultra-compact 1.23B multilingual instruction-tuned model, optimized for on-device reasoning and text generation.",
     },
-    "Qwen/Qwen2.5-0.5B-Instruct": {
-        "model_name": "Qwen 2.5 0.5B Instruct",
-        "family": "Qwen2.5",
-        "parameters": "490M",
-        "license": "Apache-2.0",
-        "license_is_osi_approved": True,
-        "estimated_ram_mb": 1200.0,
-        "description": "Compact high-capability open-weight language model optimized for coding, mathematics, and reasoning.",
-    },
-    "HuggingFaceTB/SmolLM2-360M-Instruct": {
-        "model_name": "SmolLM2 360M Instruct",
+    "HuggingFaceTB/SmolLM2-1.7B-Instruct": {
+        "model_name": "SmolLM2 1.7B Instruct",
         "family": "SmolLM2",
-        "parameters": "360M",
+        "developer": "Hugging Face",
+        "parameters": "1.71B",
+        "variant": "Instruct",
         "license": "Apache-2.0",
+        "license_url": "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct/blob/main/LICENSE",
         "license_is_osi_approved": True,
-        "estimated_ram_mb": 900.0,
-        "description": "360M parameter SmolLM2 model offering stronger reasoning while remaining accessible on 8GB RAM laptops.",
+        "supported_runtime": "transformers_cpu",
+        "runtime_model_id": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+        "weight_formats": ["safetensors"],
+        "downloadable_artifacts": ["model.safetensors (3.42 GB)", "config.json", "tokenizer.json", "generation_config.json"],
+        "download_size": "3.42 GB",
+        "quantization": "None (FP16/BF16 unquantized)",
+        "minimum_ram_mb": 3000.0,
+        "recommended_ram_mb": 4000.0,
+        "estimated_ram_mb": 4000.0,
+        "status": "available",
+        "status_reason": "Open weights available for direct download under Apache-2.0 without gating.",
+        "source_links": [
+            "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct",
+        ],
+        "verification_timestamp": "2026-10-25T20:30:00Z",
+        "description": "Hugging Face's compact 1.71B instruction model trained on 11 trillion tokens, delivering high-grade reasoning on local consumer CPUs.",
     },
 }
 
@@ -67,46 +94,99 @@ class TransformersModelAdapter(BaseModelAdapter):
         self.load_duration: float = 0.0
 
     def get_metadata(self) -> ModelMetadata:
-        """Lookup or infer model metadata and memory requirements."""
+        """Lookup verified model metadata and memory requirements."""
         known = KNOWN_MODELS.get(self.model_id)
         if known:
+            # Dynamically check status for gated models
+            status = known["status"]
+            status_reason = known["status_reason"]
+            if self.model_id == "meta-llama/Llama-3.2-1B-Instruct":
+                token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+                if token:
+                    status = "available"
+                    status_reason = "Authenticated via HF_TOKEN environment variable."
+                else:
+                    status = "requires_access_approval"
+                    status_reason = "Gated repository. Configure HF_TOKEN environment variable after accepting terms at https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct."
+
             return ModelMetadata(
                 model_id=self.model_id,
                 model_name=known["model_name"],
                 family=known["family"],
+                developer=known.get("developer", "Not verified"),
                 parameters=known["parameters"],
+                variant=known.get("variant", "Instruct"),
                 license=known["license"],
+                license_url=known.get("license_url", "Not verified"),
                 license_is_osi_approved=known["license_is_osi_approved"],
+                supported_runtime=known.get("supported_runtime", "transformers_cpu"),
+                runtime_model_id=known.get("runtime_model_id", self.model_id),
+                weight_formats=known.get("weight_formats", ["safetensors"]),
+                downloadable_artifacts=known.get("downloadable_artifacts", []),
+                download_size=known.get("download_size", "Not verified"),
+                quantization=known.get("quantization", "Not verified"),
+                minimum_ram_mb=known.get("minimum_ram_mb", 2000.0),
+                recommended_ram_mb=known.get("recommended_ram_mb", 4000.0),
                 estimated_ram_mb=known["estimated_ram_mb"],
+                status=status,
+                status_reason=status_reason,
+                source_links=known.get("source_links", []),
+                verification_timestamp=known.get("verification_timestamp", "2026-10-25T20:30:00Z"),
                 backend_type="transformers_cpu",
                 revision=self.revision,
                 description=known["description"],
             )
 
-        # Fallback for user-specified HuggingFace model repo
+        # Fallback for unrecognized models
         return ModelMetadata(
             model_id=self.model_id,
             model_name=self.model_id.split("/")[-1],
             family="Custom HF",
-            parameters="Custom",
+            developer="Not verified",
+            parameters="Not verified",
+            variant="Not verified",
             license="Refer to HF Hub card",
+            license_url="Not verified",
             license_is_osi_approved=False,
-            estimated_ram_mb=1500.0,
+            supported_runtime="transformers_cpu",
+            runtime_model_id=self.model_id,
+            weight_formats=["safetensors"],
+            downloadable_artifacts=["Not verified"],
+            download_size="Not verified",
+            quantization="Not verified",
+            minimum_ram_mb=2000.0,
+            recommended_ram_mb=4000.0,
+            estimated_ram_mb=3000.0,
+            status="unavailable",
+            status_reason="Unverified model identity not listed in TinyBench approved catalogue.",
+            source_links=[f"https://huggingface.co/{self.model_id}"],
+            verification_timestamp="2026-10-25T20:30:00Z",
             backend_type="transformers_cpu",
             revision=self.revision,
-            description="Custom Hugging Face model loaded from local disk or Hugging Face Hub.",
+            description="Custom Hugging Face model not part of the approved TinyBench catalogue.",
         )
 
     def load(self) -> float:
-        """Load tokenizer and model weights onto CPU with memory checks."""
+        """Load tokenizer and model weights onto CPU with hardware safety checks."""
         meta = self.get_metadata()
         avail_ram_mb = psutil.virtual_memory().available / (1024 * 1024)
 
-        if avail_ram_mb < meta.estimated_ram_mb:
+        if avail_ram_mb < meta.minimum_ram_mb:
             raise ResourceLimitError(
-                f"Insufficient memory: {self.model_id} requires ~{meta.estimated_ram_mb:.0f} MB RAM, "
+                f"Insufficient system memory: {self.model_id} requires at least {meta.minimum_ram_mb:.0f} MB RAM, "
                 f"but only {avail_ram_mb:.0f} MB is available on this system."
             )
+
+        token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+        if self.model_id == "meta-llama/Llama-3.2-1B-Instruct" and not token:
+            # Check if model snapshot exists in local HF cache before giving up
+            from tinybench.models.downloader import is_model_installed
+            if not is_model_installed(self.model_id):
+                raise GatedModelAccessError(
+                    "meta-llama/Llama-3.2-1B-Instruct is a gated model. "
+                    "You must accept Meta's license at https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct "
+                    "and supply your Hugging Face access token via the HF_TOKEN environment variable."
+                )
 
         try:
             import torch
@@ -116,7 +196,7 @@ class TransformersModelAdapter(BaseModelAdapter):
                 f"Transformers and PyTorch are required to run {self.model_id}: {err}"
             ) from err
 
-        # Check whether `accelerate` is available (required for device_map in transformers 5+)
+        # Check whether `accelerate` is available
         try:
             import accelerate  # noqa: F401
             _has_accelerate = True
@@ -129,6 +209,7 @@ class TransformersModelAdapter(BaseModelAdapter):
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_id,
                 revision=self.revision,
+                token=token,
             )
 
             # Ensure pad token is defined
@@ -138,26 +219,19 @@ class TransformersModelAdapter(BaseModelAdapter):
             torch_dtype = torch.float32 if self.dtype == "float32" else torch.bfloat16
 
             logger.info(f"Loading model weights for {self.model_id} on CPU...")
+            load_kwargs: dict[str, Any] = {
+                "revision": self.revision,
+                "torch_dtype": torch_dtype,
+                "token": token,
+            }
             if _has_accelerate:
-                # accelerate allows `device_map` for efficient CPU sharding
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    self.model_id,
-                    revision=self.revision,
-                    torch_dtype=torch_dtype,
-                    device_map="cpu",
-                    low_cpu_mem_usage=True,
-                )
-            else:
-                # Fallback: load without device_map when accelerate is absent
-                logger.warning(
-                    "accelerate not installed — loading model without device_map. "
-                    "Install with: pip install accelerate"
-                )
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    self.model_id,
-                    revision=self.revision,
-                    torch_dtype=torch_dtype,
-                )
+                load_kwargs["device_map"] = "cpu"
+                load_kwargs["low_cpu_mem_usage"] = True
+
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                **load_kwargs,
+            )
             self.model.eval()
 
             self._is_loaded = True
@@ -166,10 +240,17 @@ class TransformersModelAdapter(BaseModelAdapter):
 
         except Exception as exc:
             self._is_loaded = False
+            msg = str(exc)
+            if "gated" in msg.lower() or "401" in msg or "403" in msg:
+                raise GatedModelAccessError(
+                    f"Access denied for gated model '{self.model_id}'. "
+                    "Verify you have been granted access on Hugging Face and that HF_TOKEN is configured: "
+                    f"{exc}"
+                ) from exc
             raise ModelLoadError(f"Failed to load Transformers model '{self.model_id}': {exc}") from exc
 
     def generate(self, prompt: str, config: GenerationConfig) -> GenerationResult:
-        """Run CPU inference on prompt."""
+        """Run CPU inference on prompt with measured latency and token metrics."""
         if not self._is_loaded or self.model is None or self.tokenizer is None:
             raise ModelLoadError("Model is not loaded. Call load() before generate().")
 
@@ -233,7 +314,11 @@ class TransformersModelAdapter(BaseModelAdapter):
                 prompt_tokens=prompt_token_count,
                 generated_tokens=gen_token_count,
                 latency_seconds=latency,
-                metadata={"dtype": str(self.dtype), "device": "cpu"},
+                metadata={
+                    "dtype": str(self.dtype),
+                    "device": "cpu",
+                    "tokens_per_second": round(gen_token_count / latency, 2) if latency > 0 else 0.0,
+                },
             )
 
         except Exception as exc:

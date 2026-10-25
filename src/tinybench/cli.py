@@ -9,7 +9,8 @@ from typing import Sequence
 
 from tinybench.benchmarks.validator import validate_dataset_file
 from tinybench.config import BenchmarkConfig, GenerationConfig
-from tinybench.models.registry import ModelRegistry
+from tinybench.models.downloader import download_model, is_model_installed
+from tinybench.models.registry import APPROVED_MODEL_IDS, ModelRegistry
 from tinybench.reporting import (
     export_run_csv,
     export_run_json,
@@ -29,9 +30,22 @@ def create_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="subcommand", help="Available subcommands")
 
     # 1. list-models
-    subparsers.add_parser("list-models", help="List registered models and mock adapters.")
+    subparsers.add_parser("list-models", help="List the three approved open-weight benchmark models.")
 
-    # 2. validate-dataset
+    # 2. download
+    dl_parser = subparsers.add_parser("download", help="Download and verify model weights into local storage.")
+    dl_parser.add_argument(
+        "--model",
+        required=True,
+        help="Approved model name or alias (e.g. smollm2-1.7b, llama-3.2-1b, gemma4-e2b).",
+    )
+    dl_parser.add_argument(
+        "--token",
+        default=None,
+        help="Hugging Face access token (required for gated models like Llama 3.2 1B).",
+    )
+
+    # 3. validate-dataset
     val_parser = subparsers.add_parser("validate-dataset", help="Validate benchmark dataset schema and balance.")
     val_parser.add_argument(
         "dataset_path",
@@ -40,12 +54,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Path to .jsonl dataset file (default: datasets/basic_v1.jsonl).",
     )
 
-    # 3. evaluate
+    # 4. evaluate
     eval_parser = subparsers.add_parser("evaluate", help="Execute an evaluation run against a model.")
     eval_parser.add_argument(
         "--model",
-        default="mock",
-        help="Model alias (mock, mock-noisy, smollm2-135m, qwen2.5-0.5b) or HuggingFace repo ID (default: mock).",
+        default="smollm2-1.7b",
+        help="Model identifier or alias (e.g. smollm2-1.7b, llama-3.2-1b, gemma4-e2b) (default: smollm2-1.7b).",
     )
     eval_parser.add_argument(
         "--dataset",
@@ -64,12 +78,12 @@ def create_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--output-dir", default="runs", help="Output directory for runs (default: runs).")
     eval_parser.add_argument("--quiet", action="store_true", help="Suppress live progress messages.")
 
-    # 4. compare
+    # 5. compare
     comp_parser = subparsers.add_parser("compare", help="Compare multiple models or evaluation runs.")
     comp_parser.add_argument(
         "--models",
         default=None,
-        help="Comma-separated list of model aliases to run and compare (e.g. mock,mock-noisy).",
+        help="Comma-separated list of model aliases to run and compare.",
     )
     comp_parser.add_argument(
         "--runs",
@@ -84,7 +98,7 @@ def create_parser() -> argparse.ArgumentParser:
     comp_parser.add_argument("--limit", type=int, default=10, help="Example limit when evaluating --models (default: 10).")
     comp_parser.add_argument("--output-dir", default="runs", help="Directory where runs are stored (default: runs).")
 
-    # 5. export
+    # 6. export
     export_parser = subparsers.add_parser("export", help="Export an evaluation run to CSV or JSON.")
     export_parser.add_argument("--run-id", required=True, help="Run ID to export.")
     export_parser.add_argument(
@@ -102,7 +116,7 @@ def create_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--output", default=None, help="Target file path (defaults to runs/<run_id>.<format>).")
     export_parser.add_argument("--output-dir", default="runs", help="Directory where runs are stored (default: runs).")
 
-    # 6. history
+    # 7. history
     hist_parser = subparsers.add_parser("history", help="List previous evaluation runs.")
     hist_parser.add_argument("--limit", type=int, default=20, help="Max runs to display (default: 20).")
     hist_parser.add_argument("--output-dir", default="runs", help="Directory where runs are stored (default: runs).")
@@ -111,29 +125,63 @@ def create_parser() -> argparse.ArgumentParser:
 
 
 def handle_list_models() -> int:
-    """Print table of registered models and mocks."""
+    """Print verified single source of truth for the 3 approved models."""
     models = ModelRegistry.list_available_models()
-    print("\n" + "=" * 90)
-    print("TinyBench Available Models and Adapters")
-    print("=" * 90)
-    fmt = "{:<16} {:<24} {:<10} {:<12} {:<14} {:<12}"
-    print(fmt.format("Model ID", "Model Name", "Params", "Est. RAM", "License", "OSI Approved"))
-    print("-" * 90)
+    print("\n" + "=" * 115)
+    print("TinyBench Approved Open-Weight Benchmark Models (Official Catalogue)")
+    print("=" * 115)
+    fmt = "{:<24} {:<16} {:<12} {:<10} {:<16} {:<14} {:<18}"
+    print(fmt.format("Model Name", "Developer", "Params", "Download", "License", "Runtime", "Status"))
+    print("-" * 115)
     for m in models:
-        osi_str = "Yes" if m.license_is_osi_approved else "Check License"
         print(fmt.format(
-            m.model_id[:15],
             m.model_name[:23],
-            m.parameters,
-            f"{m.estimated_ram_mb:.0f} MB",
-            m.license[:13],
-            osi_str,
+            m.developer[:15],
+            m.parameters[:11],
+            m.download_size[:9],
+            m.license[:15],
+            m.supported_runtime[:13],
+            m.status[:17],
         ))
-    print("=" * 90)
-    print("Note: You may also evaluate any custom HuggingFace causal LM by passing its repo ID")
-    print("(e.g. --model HuggingFaceTB/SmolLM2-135M-Instruct).")
-    print("=" * 90 + "\n")
+    print("=" * 115)
+    print("Exact approved upstream identifiers:")
+    for m in models:
+        print(f"  • {m.model_name}: {m.model_id} ({m.license_url})")
+    print("=" * 115 + "\n")
     return 0
+
+
+def handle_download(args: argparse.Namespace) -> int:
+    """Download model weights with explicit user initiation and integrity checks."""
+    model_input = args.model.strip()
+    if not ModelRegistry.is_approved_model(model_input):
+        print(
+            f"\n[ERROR] '{model_input}' is not an approved model. "
+            f"Approved models: {', '.join(APPROVED_MODEL_IDS)}\n",
+            file=sys.stderr,
+        )
+        return 1
+
+    adapter = ModelRegistry.get_adapter(model_input)
+    meta = adapter.get_metadata()
+
+    print(f"\nInitiating verified download for {meta.model_name}...")
+    print(f"Upstream Repository: {meta.model_id}")
+    print(f"Developer: {meta.developer} | License: {meta.license}")
+    print(f"Download Size: {meta.download_size} | Runtime: {meta.supported_runtime}")
+    print("-" * 70)
+
+    def on_progress(status_text: str, pct: float | None) -> None:
+        pct_str = f" [{int(pct * 100)}%]" if pct is not None else ""
+        print(f"  --> {status_text}{pct_str}")
+
+    try:
+        dest = download_model(meta.model_id, token=args.token, progress_callback=on_progress)
+        print(f"\n[SUCCESS] Model successfully verified and ready at: {dest}\n")
+        return 0
+    except Exception as exc:
+        print(f"\n[ERROR] Download failed: {exc}\n", file=sys.stderr)
+        return 1
 
 
 def handle_validate_dataset(dataset_path: str) -> int:
@@ -168,6 +216,38 @@ def handle_validate_dataset(dataset_path: str) -> int:
 
 def handle_evaluate(args: argparse.Namespace) -> int:
     """Execute evaluation run."""
+    model_name = args.model.strip()
+
+    # Distinguish real models vs offline demo simulator
+    is_demo_mode = model_name.startswith("mock")
+    if is_demo_mode:
+        print("\n" + "!" * 70)
+        print("⚠️ [NOTICE] Executing in DEMO / SIMULATED DATA mode.")
+        print("Results will be flagged as simulated data and excluded from real comparisons.")
+        print("!" * 70 + "\n")
+    elif not ModelRegistry.is_approved_model(model_name):
+        print(
+            f"\n[FATAL ERROR] Model '{model_name}' is not in the approved TinyBench catalogue.\n"
+            f"Approved models:\n"
+            f"  1. SmolLM2 1.7B Instruct (smollm2-1.7b)\n"
+            f"  2. Llama 3.2 1B Instruct (llama-3.2-1b)\n"
+            f"  3. Gemma 4 E2B (gemma4-e2b)\n",
+            file=sys.stderr,
+        )
+        return 1
+    else:
+        # Check whether model is installed
+        adapter = ModelRegistry.get_adapter(model_name)
+        canonical_id = adapter.model_id
+        if not is_model_installed(canonical_id):
+            print(
+                f"\n[ERROR] Model '{canonical_id}' is not installed locally.\n"
+                f"Please download it first using:\n"
+                f"  tinybench download --model {canonical_id}\n",
+                file=sys.stderr,
+            )
+            return 1
+
     cat_list = [c.strip() for c in args.categories.split(",")] if args.categories else None
 
     gen_cfg = GenerationConfig(
@@ -178,7 +258,7 @@ def handle_evaluate(args: argparse.Namespace) -> int:
 
     bench_cfg = BenchmarkConfig(
         dataset_path=args.dataset,
-        model_name=args.model,
+        model_name=model_name,
         categories=cat_list,
         limit=args.limit,
         generation_config=gen_cfg,
@@ -186,7 +266,7 @@ def handle_evaluate(args: argparse.Namespace) -> int:
     )
 
     print(f"\nStarting TinyBench Evaluation Run")
-    print(f"Model: {args.model}")
+    print(f"Model: {model_name}")
     print(f"Dataset: {args.dataset}")
     if args.limit:
         print(f"Limit: {args.limit} examples")
@@ -253,15 +333,16 @@ def handle_compare(args: argparse.Namespace) -> int:
         return 1
 
     table = generate_comparison_table(results)
-    print("\n" + "=" * 105)
+    print("\n" + "=" * 125)
     print("Model Comparison Summary")
-    print("=" * 105)
-    header = "{:<24} {:<10} {:<12} {:<14} {:<12} {:<14} {:<12}"
-    print(header.format("Model", "Total", "Accuracy", "Exact Match", "Compliance", "Median Latency", "Peak RAM"))
-    print("-" * 105)
+    print("=" * 125)
+    header = "{:<24} {:<18} {:<8} {:<12} {:<12} {:<12} {:<14} {:<12}"
+    print(header.format("Model", "Data Mode", "Total", "Accuracy", "Exact Match", "Compliance", "Median Latency", "Peak RAM"))
+    print("-" * 125)
     for r in table:
         print(header.format(
             r["Model Name"][:23],
+            r["Data Mode"][:17],
             str(r["Total"]),
             f"{r['Accuracy (%)']:.1f}%",
             f"{r['Exact Match (%)']:.1f}%",
@@ -269,7 +350,7 @@ def handle_compare(args: argparse.Namespace) -> int:
             f"{r['Median Latency (s)']:.3f} s",
             f"{r['Peak RAM (MB)']:.1f} MB",
         ))
-    print("=" * 105 + "\n")
+    print("=" * 125 + "\n")
     return 0
 
 
@@ -297,25 +378,27 @@ def handle_history(args: argparse.Namespace) -> int:
     runs = db.list_runs(limit=args.limit)
     if not runs:
         print(f"\nNo previous evaluation runs found in '{args.output_dir}'.")
-        print("Run an evaluation using: python -m tinybench.cli evaluate --model mock\n")
+        print("Run an evaluation using: tinybench evaluate --model smollm2-1.7b\n")
         return 0
 
-    print("\n" + "=" * 105)
+    print("\n" + "=" * 120)
     print(f"Evaluation Run History (Last {len(runs)} runs in {args.output_dir})")
-    print("=" * 105)
-    fmt = "{:<28} {:<24} {:<16} {:<10} {:<10} {:<12}"
-    print(fmt.format("Run ID", "Model", "Dataset", "Examples", "Accuracy", "Median Lat"))
-    print("-" * 105)
+    print("=" * 120)
+    fmt = "{:<28} {:<24} {:<16} {:<16} {:<10} {:<10} {:<12}"
+    print(fmt.format("Run ID", "Model", "Data Mode", "Dataset", "Examples", "Accuracy", "Median Lat"))
+    print("-" * 120)
     for r in runs:
+        mode_str = "🧪 Demo" if r.get("is_demo") else "🧠 Verified"
         print(fmt.format(
             r["run_id"][:27],
             r["model_name"][:23],
+            mode_str,
             r["dataset_name"][:15],
             f"{r['total_examples']}",
             f"{r['accuracy']:.1f}%",
             f"{r['median_latency']:.3f} s",
         ))
-    print("=" * 105 + "\n")
+    print("=" * 120 + "\n")
     return 0
 
 
@@ -330,6 +413,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.subcommand == "list-models":
         return handle_list_models()
+    elif args.subcommand == "download":
+        return handle_download(args)
     elif args.subcommand == "validate-dataset":
         return handle_validate_dataset(args.dataset_path)
     elif args.subcommand == "evaluate":

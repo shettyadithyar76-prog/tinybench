@@ -20,7 +20,7 @@ class RunDatabase:
         self._init_db()
 
     def _init_db(self) -> None:
-        """Create sqlite tables if not present."""
+        """Create sqlite tables if not present and apply migrations."""
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS evaluation_runs (
@@ -41,9 +41,15 @@ class RunDatabase:
                     init_latency REAL NOT NULL,
                     peak_memory_mb REAL NOT NULL,
                     memory_delta_mb REAL NOT NULL,
-                    json_path TEXT NOT NULL
+                    json_path TEXT NOT NULL,
+                    is_demo INTEGER DEFAULT 0
                 )
             """)
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(evaluation_runs)")
+            cols = [c[1] for c in cursor.fetchall()]
+            if "is_demo" not in cols:
+                conn.execute("ALTER TABLE evaluation_runs ADD COLUMN is_demo INTEGER DEFAULT 0")
             conn.commit()
 
     def save_run(self, result: RunResult) -> Path:
@@ -51,6 +57,8 @@ class RunDatabase:
         json_path = self.storage_dir / f"{result.run_id}.json"
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(result.model_dump(), f, indent=2)
+
+        is_demo_val = 1 if getattr(result, "is_demo", False) else 0
 
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
@@ -60,8 +68,8 @@ class RunDatabase:
                     dataset_name, total_examples, successful_examples, failed_examples,
                     accuracy, exact_match_rate, avg_compliance_score,
                     median_latency, mean_latency, init_latency,
-                    peak_memory_mb, memory_delta_mb, json_path
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    peak_memory_mb, memory_delta_mb, json_path, is_demo
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     result.run_id,
@@ -82,30 +90,33 @@ class RunDatabase:
                     result.memory_measurement.peak_rss_mb,
                     result.memory_measurement.memory_delta_mb,
                     str(json_path),
+                    is_demo_val,
                 ),
             )
             conn.commit()
 
         return json_path
 
-    def list_runs(self, limit: int = 100) -> list[dict[str, Any]]:
-        """List summary records of all stored runs ordered by most recent."""
+    def list_runs(self, limit: int = 100, real_only: bool = False) -> list[dict[str, Any]]:
+        """List summary records of stored runs ordered by most recent."""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute(
-                """
+            query = """
                 SELECT run_id, timestamp, model_name, model_id, family,
                        dataset_name, total_examples, successful_examples, failed_examples,
                        accuracy, exact_match_rate, avg_compliance_score,
                        median_latency, mean_latency, init_latency,
-                       peak_memory_mb, memory_delta_mb, json_path
+                       peak_memory_mb, memory_delta_mb, json_path, is_demo
                 FROM evaluation_runs
-                ORDER BY timestamp DESC
-                LIMIT ?
-                """,
-                (limit,),
-            )
+            """
+            params: list[Any] = []
+            if real_only:
+                query += " WHERE is_demo = 0"
+            query += " ORDER BY timestamp DESC LIMIT ?"
+            params.append(limit)
+
+            cursor.execute(query, tuple(params))
             return [dict(row) for row in cursor.fetchall()]
 
     def get_run(self, run_id: str) -> RunResult | None:

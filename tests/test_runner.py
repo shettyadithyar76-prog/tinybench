@@ -31,8 +31,11 @@ def test_runner_end_to_end(sample_jsonl_file: Path):
     assert result.failed_examples == 0
     assert result.accuracy > 0.0
 
-    # Verify metadata captured
+    # Verify metadata and provenance captured
     assert result.model_metadata.model_id == "mock"
+    assert result.is_demo is True
+    assert result.provenance["is_demo"] is True
+    assert result.provenance["model_name"] == result.model_metadata.model_name
     assert result.system_info.processor is not None
     assert result.latency_summary.mean_latency_seconds >= 0.0
     assert result.memory_measurement.peak_rss_mb > 0.0

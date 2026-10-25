@@ -31,7 +31,9 @@ from tinybench.benchmarks.loader import load_dataset
 from tinybench.benchmarks.schema import TaskCategory
 from tinybench.benchmarks.validator import validate_dataset_file
 from tinybench.config import BenchmarkConfig, GenerationConfig, SystemInfo
-from tinybench.models.registry import ModelRegistry
+from tinybench.models.downloader import download_model, is_model_installed
+from tinybench.models.ollama_backend import check_ollama_daemon
+from tinybench.models.registry import APPROVED_MODEL_IDS, ModelRegistry
 from tinybench.reporting import export_run_csv, generate_comparison_table
 from tinybench.runner import BenchmarkRunner, RunResult, TaskResult
 from tinybench.storage import RunDatabase
@@ -795,55 +797,70 @@ if nav_choice == "Overview":
 
     # 4-Card Bento Grid
     latest = all_runs[0] if all_runs else None
+
+    if latest and latest.get("is_demo"):
+        st.markdown(
+            """
+            <div style="background: var(--kpi-butter-bg); border: 1px solid var(--kpi-butter-border); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; color: var(--kpi-butter-text); font-size: 0.82rem; font-weight: 600;">
+                ⚠️ Showing latest run: <strong>DEMO / SIMULATED DATA</strong>. Execute a benchmark on an installed model for verified real measurements.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
     k1, k2, k3, k4 = st.columns(4)
 
     with k1:
-        acc_str = f"{latest['accuracy']:.1f}%" if latest else "84.2%"
+        acc_str = f"{latest['accuracy']:.1f}%" if latest else "Not measured"
+        acc_sub = f"Dataset: {latest['dataset_name']}" if latest else "No completed runs"
         st.markdown(
             f"""
             <div class="kpi-card kpi-card-mint">
                 <div class="kpi-title" style="color: var(--kpi-mint-text);">Throughput Score</div>
-                <div class="kpi-value" style="color: var(--kpi-mint-text);">{acc_str}</div>
-                <div class="kpi-sub" style="color: var(--kpi-mint-sub);">↑ +4.1% vs baseline</div>
+                <div class="kpi-value" style="color: var(--kpi-mint-text); font-size: {'1.5rem' if not latest else '2.1rem'};">{acc_str}</div>
+                <div class="kpi-sub" style="color: var(--kpi-mint-sub);">{acc_sub}</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
     with k2:
-        lat_str = f"{latest['median_latency'] * 1000:.0f} ms" if latest else "42 ms"
+        lat_str = f"{latest['median_latency'] * 1000:.0f} ms" if latest else "Not measured"
+        lat_sub = f"Mean: {latest['mean_latency'] * 1000:.0f} ms" if latest else "Awaiting benchmark"
         st.markdown(
             f"""
             <div class="kpi-card kpi-card-lilac">
                 <div class="kpi-title" style="color: var(--kpi-lilac-text);">Median Latency</div>
-                <div class="kpi-value" style="color: var(--kpi-lilac-text);">{lat_str}</div>
-                <div class="kpi-sub" style="color: var(--kpi-lilac-sub);">p95: 58 ms (TTFT)</div>
+                <div class="kpi-value" style="color: var(--kpi-lilac-text); font-size: {'1.5rem' if not latest else '2.1rem'};">{lat_str}</div>
+                <div class="kpi-sub" style="color: var(--kpi-lilac-sub);">{lat_sub}</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
     with k3:
-        mem_str = f"{latest['peak_memory_mb'] / 1024:.2f} GB" if latest else "3.42 GB"
+        mem_str = f"{latest['peak_memory_mb']:.1f} MB" if latest else "Not measured"
+        mem_sub = "Resident process RAM" if latest else "No active process"
         st.markdown(
             f"""
             <div class="kpi-card kpi-card-butter">
                 <div class="kpi-title" style="color: var(--kpi-butter-text);">Peak Memory</div>
-                <div class="kpi-value" style="color: var(--kpi-butter-text);">{mem_str}</div>
-                <div class="kpi-sub" style="color: var(--kpi-butter-sub);">Within 8GB RAM budget</div>
+                <div class="kpi-value" style="color: var(--kpi-butter-text); font-size: {'1.5rem' if not latest else '2.1rem'};">{mem_str}</div>
+                <div class="kpi-sub" style="color: var(--kpi-butter-sub);">{mem_sub}</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
     with k4:
-        comp_str = f"{(1.0 - latest['accuracy']/100.0) * 100:.1f}%" if latest else "0.2%"
+        comp_str = f"{(1.0 - latest['accuracy']/100.0) * 100:.1f}%" if latest else "Not measured"
+        comp_sub = f"Exact Match: {latest['exact_match_rate']:.1f}%" if latest else "Awaiting execution"
         st.markdown(
             f"""
             <div class="kpi-card kpi-card-rose">
                 <div class="kpi-title" style="color: var(--kpi-rose-text);">Error Rate</div>
-                <div class="kpi-value" style="color: var(--kpi-rose-text);">{comp_str}</div>
-                <div class="kpi-sub" style="color: var(--kpi-rose-sub);">Zero fatal crashes</div>
+                <div class="kpi-value" style="color: var(--kpi-rose-text); font-size: {'1.5rem' if not latest else '2.1rem'};">{comp_str}</div>
+                <div class="kpi-sub" style="color: var(--kpi-rose-sub);">{comp_sub}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -886,19 +903,7 @@ if nav_choice == "Overview":
             else:
                 st.caption("No task points available for this run.")
         else:
-            fig_demo = go.Figure()
-            fig_demo.add_trace(
-                go.Scatter(
-                    x=["#1", "#2", "#3", "#4", "#5", "#6"],
-                    y=[48, 42, 39, 36, 35, 38],
-                    mode="lines+markers",
-                    line=dict(color=chart_line_color, width=3),
-                    marker=dict(size=7, color=chart_marker_color),
-                    name="Median Latency (ms)",
-                )
-            )
-            apply_plotly_fig_theme(fig_demo, height=270, is_dark_mode=is_dark)
-            st.plotly_chart(fig_demo, use_container_width=True)
+            st.info("No benchmark latency trend to display yet. Run an evaluation from 'Run Benchmark' to record and visualize real CPU inference latency curves.")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -930,10 +935,15 @@ if nav_choice == "Overview":
                 unsafe_allow_html=True,
             )
 
-        if st.button("▶ Run Quick 5-Example Benchmark", type="primary", use_container_width=True):
+        # Check if any approved model is installed
+        installed_models = [mid for mid in APPROVED_MODEL_IDS if is_model_installed(mid)]
+        quick_target = installed_models[0] if installed_models else "mock"
+        btn_label = f"▶ Run Quick Benchmark ({quick_target})" if installed_models else "▶ Run Quick Demo Simulation (Simulated Data)"
+
+        if st.button(btn_label, type="primary", use_container_width=True):
             cfg = BenchmarkConfig(
                 dataset_path="datasets/basic_v1.jsonl",
-                model_name="mock",
+                model_name=quick_target,
                 limit=5,
                 generation_config=GenerationConfig(max_new_tokens=32, temperature=0.0),
                 output_dir=str(STORAGE_DIR),
@@ -979,29 +989,32 @@ elif nav_choice == "Run Benchmark":
     col_setup, col_meta = st.columns([1.6, 1.4])
 
     with col_setup:
-        st.markdown("#### 01. Choose a Model")
+        st.markdown("#### 01. Choose Approved Model")
         model_options = [
-            "mock (Deterministic Simulator)",
-            "mock-noisy (Simulates ~70% Accuracy)",
-            "mock-slow (Simulates Latency)",
-            "smollm2-135m (HuggingFaceTB/SmolLM2-135M-Instruct)",
-            "qwen2.5-0.5b (Qwen/Qwen2.5-0.5B-Instruct)",
-            "Custom HuggingFace Model Repo ID",
+            "SmolLM2 1.7B Instruct (HuggingFaceTB/SmolLM2-1.7B-Instruct)",
+            "Llama 3.2 1B Instruct (meta-llama/Llama-3.2-1B-Instruct)",
+            "Gemma 4 E2B (gemma4:e2b - Ollama)",
+            "Offline Demo Simulator (Simulated Data / CI Only)",
         ]
         selected_model_option = st.selectbox("Model Identifier", model_options, index=0)
 
-        if "Custom" in selected_model_option:
-            model_target = st.text_input("Custom Model Repo ID / Path", "HuggingFaceTB/SmolLM2-135M-Instruct")
-        elif "smollm2-135m" in selected_model_option:
-            model_target = "smollm2-135m"
-        elif "qwen2.5-0.5b" in selected_model_option:
-            model_target = "qwen2.5-0.5b"
-        elif "mock-noisy" in selected_model_option:
-            model_target = "mock-noisy"
-        elif "mock-slow" in selected_model_option:
-            model_target = "mock-slow"
+        if "SmolLM2" in selected_model_option:
+            model_target = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
+        elif "Llama" in selected_model_option:
+            model_target = "meta-llama/Llama-3.2-1B-Instruct"
+        elif "Gemma" in selected_model_option:
+            model_target = "gemma4:e2b"
         else:
             model_target = "mock"
+
+        hf_token_val = None
+        if model_target == "meta-llama/Llama-3.2-1B-Instruct":
+            hf_token_val = st.text_input(
+                "Hugging Face Access Token",
+                value=os.environ.get("HF_TOKEN", ""),
+                type="password",
+                help="Required to download Llama 3.2 weights after accepting terms at https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct",
+            )
 
         st.markdown("#### 02. Choose Benchmark Dataset")
         dataset_path_str = st.text_input("Benchmark Dataset", "datasets/basic_v1.jsonl")
@@ -1039,54 +1052,77 @@ elif nav_choice == "Run Benchmark":
         meta = adapter_preview.get_metadata()
 
         is_mock_selected = "mock" in meta.backend_type.lower()
-        badge_type = (
-            '<span class="badge-pill badge-mint">🧪 ZERO-DOWNLOAD SIMULATION</span>'
-            if is_mock_selected
-            else '<span class="badge-pill badge-rose">🧠 OPEN-WEIGHT CAUSAL LM</span>'
-        )
+        is_installed = is_model_installed(meta.model_id) if not is_mock_selected else True
+
+        if is_mock_selected:
+            status_badge = '<span class="badge-pill badge-butter">🧪 DEMO SIMULATOR</span>'
+        elif is_installed:
+            status_badge = '<span class="badge-pill badge-mint">✅ INSTALLED & READY</span>'
+        elif meta.status == "requires_access_approval":
+            status_badge = '<span class="badge-pill badge-butter">🔒 ACCESS APPROVAL REQUIRED</span>'
+        else:
+            status_badge = '<span class="badge-pill badge-rose">⬇️ NOT DOWNLOADED</span>'
 
         st.markdown(
             f"""
             <div class="surface-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-weight: 700; color: var(--text-primary); font-size: 1.05rem;">{meta.model_name}</span>
-                    {badge_type}
+                    {status_badge}
                 </div>
                 <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
                     {meta.description}
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.78rem; font-family: monospace; background: var(--surface-nested); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                    <div><span style="color: var(--text-muted);">Developer:</span> <span style="color: var(--text-primary); font-weight: 600;">{getattr(meta, 'developer', 'Not verified')}</span></div>
                     <div><span style="color: var(--text-muted);">Parameters:</span> <span style="color: var(--text-primary); font-weight: 600;">{meta.parameters}</span></div>
+                    <div><span style="color: var(--text-muted);">Download Size:</span> <span style="color: var(--text-primary); font-weight: 600;">{getattr(meta, 'download_size', 'Not verified')}</span></div>
+                    <div><span style="color: var(--text-muted);">Quantization:</span> <span style="color: var(--text-primary); font-weight: 600;">{getattr(meta, 'quantization', 'Not verified')}</span></div>
                     <div><span style="color: var(--text-muted);">License:</span> <span style="color: var(--text-primary); font-weight: 600;">{meta.license}</span></div>
-                    <div><span style="color: var(--text-muted);">Est. RAM:</span> <span style="color: var(--kpi-mint-text); font-weight: 700;">{meta.estimated_ram_mb:.0f} MB</span></div>
-                    <div><span style="color: var(--text-muted);">Backend:</span> <span style="color: var(--text-primary); font-weight: 600;">{meta.backend_type}</span></div>
+                    <div><span style="color: var(--text-muted);">Runtime:</span> <span style="color: var(--text-primary); font-weight: 600;">{meta.supported_runtime}</span></div>
+                    <div><span style="color: var(--text-muted);">Min RAM:</span> <span style="color: var(--kpi-mint-text); font-weight: 700;">{getattr(meta, 'minimum_ram_mb', 2000.0):.0f} MB</span></div>
+                    <div><span style="color: var(--text-muted);">Rec. RAM:</span> <span style="color: var(--kpi-mint-text); font-weight: 700;">{getattr(meta, 'recommended_ram_mb', 4000.0):.0f} MB</span></div>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+
+        if not is_mock_selected:
+            if not is_installed:
+                st.warning(f"⚠️ **Model Not Cached Locally**: {meta.status_reason or 'Weights must be downloaded before executing a CPU benchmark.'}")
+                if st.button(f"⬇️ Download & Verify {meta.model_name}", use_container_width=True):
+                    with st.spinner(f"Downloading {meta.model_name}..."):
+                        prog = st.progress(0, text="Initializing download...")
+                        def dl_cb(msg, pct):
+                            prog.progress(int((pct or 0.5) * 100), text=msg)
+                        try:
+                            token_arg = hf_token_val if hf_token_val else None
+                            dest_path = download_model(meta.model_id, token=token_arg, progress_callback=dl_cb)
+                            st.success(f"✅ Model downloaded and verified: {dest_path}")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as dl_err:
+                            st.error(f"❌ Download failed: {dl_err}")
+            else:
+                st.success(f"✅ **Ready to Benchmark**: Model is verified in local cache.")
 
         if sys_info.available_ram_mb < meta.estimated_ram_mb:
             st.error(
                 f"⚠️ **Memory Warning**: Available RAM ({sys_info.available_ram_mb:.0f} MB) is below recommended ({meta.estimated_ram_mb:.0f} MB)."
             )
         else:
-            st.success(
-                f"✅ **Hardware Compatible**: Current RAM ({sys_info.available_ram_mb:.0f} MB) is safe for {meta.model_name}."
+            st.info(
+                f"💻 System RAM: {sys_info.available_ram_mb:.0f} MB available."
             )
-
-        st.markdown(
-            """
-            <div style="background: var(--kpi-butter-bg); border: 1px solid var(--kpi-butter-border); border-radius: 10px; padding: 14px; font-size: 0.82rem; color: var(--kpi-butter-text); margin-top: 14px;">
-                <strong>⚠️ Hardware Advisory:</strong> CPU execution utilizes system threads for sequential inference. Keep this tab active while the evaluation runs.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
     st.divider()
 
     if st.button("🚀 Launch Benchmark Run", type="primary", use_container_width=True):
+        if not is_mock_selected and not is_installed:
+            st.error(f"❌ Cannot launch benchmark: '{meta.model_name}' is not installed locally. Please click 'Download & Verify' above first.")
+            st.stop()
+
         bench_cfg = BenchmarkConfig(
             dataset_path=dataset_path_str,
             model_name=model_target,
@@ -1176,11 +1212,11 @@ elif nav_choice == "Run Details":
         if not run_res:
             st.error(f"Could not load run artifacts for `{selected_run_id}`")
         else:
-            is_mock = "mock" in run_res.model_metadata.backend_type.lower()
+            is_mock = "mock" in run_res.model_metadata.backend_type.lower() or getattr(run_res, "is_demo", False)
             badge_html = (
-                '<span class="badge-pill badge-mint">🧪 MOCK SIMULATION</span>'
+                '<span class="badge-pill badge-butter">🧪 DEMO / SIMULATED DATA</span>'
                 if is_mock
-                else '<span class="badge-pill badge-rose">🧠 REAL NEURAL WEIGHTS</span>'
+                else '<span class="badge-pill badge-mint">🧠 VERIFIED GENUINE MEASUREMENT</span>'
             )
 
             # 4 Bento KPI Row
@@ -1429,7 +1465,7 @@ elif nav_choice == "Model Comparison":
                 """
                 <div class="kpi-card kpi-card-lilac">
                     <div class="kpi-title" style="color: var(--kpi-lilac-text);">Evaluation Context</div>
-                    <div style="font-size: 1.15rem; font-weight: 800; color: var(--kpi-lilac-text); margin-bottom: 2px;">MMLU Evaluation</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: var(--kpi-lilac-text); margin-bottom: 2px;">TinyBench Benchmark</div>
                     <div style="font-size: 0.78rem; color: var(--kpi-lilac-sub);">Context attached to every reported metric</div>
                 </div>
                 """,
@@ -1671,25 +1707,35 @@ elif nav_choice == "05. Models & Datasets" or nav_choice == "Models & Datasets":
         tab_models, tab_datasets = st.tabs(["Model Registry", "Dataset Catalogue"])
 
         with tab_models:
-            st.markdown("### 🧠 Registered Model Sources")
+            st.markdown("### 🧠 Approved Open-Weight Benchmark Models (Official Catalogue)")
             models = ModelRegistry.list_available_models()
             for m in models:
-                is_mock = "mock" in m.backend_type.lower()
-                badge = '<span class="badge-pill badge-mint">AVAILABLE</span>' if is_mock else '<span class="badge-pill badge-rose">OPEN-WEIGHTS</span>'
+                status_color = "var(--kpi-mint-text)" if m.status == "available" else ("var(--kpi-butter-text)" if m.status == "requires_access_approval" else "var(--kpi-rose-text)")
+                badge_style = "badge-mint" if m.status == "available" else ("badge-butter" if m.status == "requires_access_approval" else "badge-rose")
+                status_label = "AVAILABLE" if m.status == "available" else ("APPROVAL REQUIRED" if m.status == "requires_access_approval" else "UNAVAILABLE")
 
                 st.markdown(
                     f"""
                     <div class="surface-card">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">{m.model_name}</span>
-                            <div>{badge}</div>
+                            <div>
+                                <span style="font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">{m.model_name}</span>
+                                <span style="font-size: 0.78rem; color: var(--text-muted); margin-left: 8px;">by {getattr(m, 'developer', 'Not verified')}</span>
+                            </div>
+                            <div><span class="badge-pill {badge_style}">{status_label}</span></div>
                         </div>
                         <div style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 12px;">{m.description}</div>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.78rem; font-family: monospace; background: var(--surface-nested); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
-                            <div><span style="color: var(--text-muted);">Provider:</span> <span style="color: var(--text-primary); font-weight: 600;">{m.model_id}</span></div>
-                            <div><span style="color: var(--text-muted);">Parameters:</span> <span style="color: var(--text-primary); font-weight: 600;">{m.parameters}</span></div>
-                            <div><span style="color: var(--text-muted);">Status:</span> <span style="color: var(--kpi-mint-text); font-weight: 700;">Ready for Selection</span></div>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-size: 0.78rem; font-family: monospace; background: var(--surface-nested); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle); margin-bottom: 10px;">
+                            <div><span style="color: var(--text-muted);">Upstream ID:</span><br><span style="color: var(--text-primary); font-weight: 600;">{m.model_id}</span></div>
+                            <div><span style="color: var(--text-muted);">Parameters:</span><br><span style="color: var(--text-primary); font-weight: 600;">{m.parameters} ({getattr(m, 'variant', 'Instruct')})</span></div>
+                            <div><span style="color: var(--text-muted);">Download Size:</span><br><span style="color: var(--text-primary); font-weight: 600;">{getattr(m, 'download_size', 'Not verified')}</span></div>
+                            <div><span style="color: var(--text-muted);">Quantization:</span><br><span style="color: var(--text-primary); font-weight: 600;">{getattr(m, 'quantization', 'Not verified')}</span></div>
+                            <div><span style="color: var(--text-muted);">License:</span><br><a href="{getattr(m, 'license_url', '#')}" target="_blank" style="color: var(--tag-color); font-weight: 600;">{m.license}</a></div>
+                            <div><span style="color: var(--text-muted);">Runtime:</span><br><span style="color: var(--text-primary); font-weight: 600;">{getattr(m, 'supported_runtime', m.backend_type)}</span></div>
+                            <div><span style="color: var(--text-muted);">Min / Rec. RAM:</span><br><span style="color: var(--kpi-mint-text); font-weight: 700;">{getattr(m, 'minimum_ram_mb', 2000.0):.0f} / {getattr(m, 'recommended_ram_mb', 4000.0):.0f} MB</span></div>
+                            <div><span style="color: var(--text-muted);">Verified:</span><br><span style="color: var(--text-muted);">{getattr(m, 'verification_timestamp', '2026-10-25T20:30:00Z')[:10]}</span></div>
                         </div>
+                        {f'<div style="font-size: 0.76rem; color: {status_color}; font-weight: 600; padding: 6px 10px; background: var(--surface-app); border-radius: 6px;">ℹ️ {m.status_reason}</div>' if getattr(m, 'status_reason', None) else ''}
                     </div>
                     """,
                     unsafe_allow_html=True,

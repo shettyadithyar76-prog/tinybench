@@ -10,6 +10,26 @@ class DatasetValidationError(TinyBenchError):
     pass
 
 
+class ModelNotFoundError(TinyBenchError):
+    """Raised when a requested model is not found in the approved catalogue."""
+    pass
+
+
+class ModelDownloadError(TinyBenchError):
+    """Raised when downloading model weights fails."""
+    pass
+
+
+class GatedModelAccessError(ModelDownloadError):
+    """Raised when a model requires user license approval or HF_TOKEN."""
+    pass
+
+
+class RuntimeUnavailableError(TinyBenchError):
+    """Raised when a required inference runtime (e.g. Ollama daemon) is unavailable."""
+    pass
+
+
 class ModelLoadError(TinyBenchError):
     """Raised when loading a model adapter fails."""
     pass
