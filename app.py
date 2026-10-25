@@ -981,22 +981,25 @@ elif nav_choice == "Run Benchmark":
                 <div class="page-title">Configure and Benchmark Run</div>
                 <div class="page-subtitle">Select model, benchmark dataset, parameters and execution environment.</div>
             </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    col_setup, col_meta = st.columns([1.6, 1.4])
-
-    with col_setup:
-        st.markdown("#### 01. Choose Approved Model")
         model_options = [
+            "Gemma 4 E2B (gemma4:e2b - Ollama)",
+            "DeepSeek R1 Distill 1.5B (deepseek-r1:1.5b - Ollama)",
             "SmolLM2 1.7B Instruct (HuggingFaceTB/SmolLM2-1.7B-Instruct)",
             "Llama 3.2 1B Instruct (meta-llama/Llama-3.2-1B-Instruct)",
-            "Gemma 4 E2B (gemma4:e2b - Ollama)",
             "Offline Demo Simulator (Simulated Data / CI Only)",
         ]
         selected_model_option = st.selectbox("Model Identifier", model_options, index=0)
+
+        if "Gemma" in selected_model_option:
+            model_target = "gemma4:e2b"
+        elif "DeepSeek" in selected_model_option:
+            model_target = "deepseek-r1:1.5b"
+        elif "SmolLM2" in selected_model_option:
+            model_target = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
+        elif "Llama" in selected_model_option:
+            model_target = "meta-llama/Llama-3.2-1B-Instruct"
+        else:
+            model_target = "mock"
 
         if "SmolLM2" in selected_model_option:
             model_target = "HuggingFaceTB/SmolLM2-1.7B-Instruct"

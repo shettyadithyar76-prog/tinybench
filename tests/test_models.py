@@ -24,16 +24,17 @@ from tinybench.models.registry import APPROVED_MODEL_IDS, ModelRegistry
 from tinybench.models.transformers_backend import TransformersModelAdapter
 
 
-def test_catalogue_contains_exactly_three_approved_models():
-    """Verify that the catalogue contains exactly the 3 approved real models and zero mocks."""
+def test_catalogue_contains_approved_models():
+    """Verify that the catalogue contains approved real models and zero mocks."""
     models = ModelRegistry.list_available_models()
-    assert len(models) == 3, f"Expected exactly 3 models, got {len(models)}"
+    assert len(models) == 4, f"Expected 4 models, got {len(models)}"
 
     model_ids = [m.model_id for m in models]
     assert model_ids == [
         "meta-llama/Llama-3.2-1B-Instruct",
         "HuggingFaceTB/SmolLM2-1.7B-Instruct",
         "gemma4:e2b",
+        "deepseek-r1:1.5b",
     ]
 
     # Verify no mock models appear in the available catalogue

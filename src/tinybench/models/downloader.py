@@ -29,6 +29,7 @@ REQUIRED_DISK_BYTES: dict[str, int] = {
     "meta-llama/Llama-3.2-1B-Instruct": int(3.5 * 1024 * 1024 * 1024),   # 3.5 GB
     "HuggingFaceTB/SmolLM2-1.7B-Instruct": int(4.5 * 1024 * 1024 * 1024), # 4.5 GB
     "gemma4:e2b": int(2.5 * 1024 * 1024 * 1024),                         # 2.5 GB
+    "deepseek-r1:1.5b": int(1.5 * 1024 * 1024 * 1024),                   # 1.5 GB
 }
 
 
@@ -37,7 +38,7 @@ def is_model_installed(model_id: str) -> bool:
     clean_id = model_id.strip()
 
     # Ollama runtime model
-    if clean_id == "gemma4:e2b" or clean_id.startswith("gemma4"):
+    if clean_id in ("gemma4:e2b", "deepseek-r1:1.5b") or ":" in clean_id or clean_id.startswith(("gemma4", "deepseek")):
         return is_ollama_model_installed(clean_id)
 
     # Hugging Face transformers model
@@ -91,7 +92,7 @@ def download_model(
     check_disk_space_for_model(clean_id)
 
     # 2. Ollama model download path
-    if clean_id == "gemma4:e2b" or clean_id.startswith("gemma4"):
+    if clean_id in ("gemma4:e2b", "deepseek-r1:1.5b") or ":" in clean_id or clean_id.startswith(("gemma4", "deepseek")):
         is_running, daemon_msg = check_ollama_daemon()
         if not is_running:
             raise RuntimeUnavailableError(daemon_msg)

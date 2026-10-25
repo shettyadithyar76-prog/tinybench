@@ -9,11 +9,12 @@ from tinybench.models.mock import MockModelAdapter
 from tinybench.models.ollama_backend import OLLAMA_CATALOGUE, OllamaModelAdapter
 from tinybench.models.transformers_backend import KNOWN_MODELS, TransformersModelAdapter
 
-# Exactly the three approved real open-weight models
+# Approved real open-weight models
 APPROVED_MODEL_IDS: list[str] = [
     "meta-llama/Llama-3.2-1B-Instruct",
     "HuggingFaceTB/SmolLM2-1.7B-Instruct",
     "gemma4:e2b",
+    "deepseek-r1:1.5b",
 ]
 
 # Canonical aliases for convenience across CLI and UI
@@ -34,6 +35,12 @@ MODEL_ALIASES: dict[str, str] = {
     "gemma4": "gemma4:e2b",
     "google/gemma-4-e2b": "gemma4:e2b",
     "google/gemma-4-E2B": "gemma4:e2b",
+    # DeepSeek R1 Distill 1.5B
+    "deepseek-r1": "deepseek-r1:1.5b",
+    "deepseek-r1-1.5b": "deepseek-r1:1.5b",
+    "deepseek-1.5b": "deepseek-r1:1.5b",
+    "deepseek": "deepseek-r1:1.5b",
+    "deepseek-ai/deepseek-r1-distill-qwen-1.5b": "deepseek-r1:1.5b",
 }
 
 
@@ -44,7 +51,7 @@ class ModelRegistry:
 
     @classmethod
     def list_available_models(cls) -> list[ModelMetadata]:
-        """Return verified metadata for exactly the three approved models."""
+        """Return verified metadata for approved models."""
         models: list[ModelMetadata] = []
 
         # 1. Llama 3.2 1B Instruct
@@ -59,6 +66,10 @@ class ModelRegistry:
         gemma_adapter = OllamaModelAdapter("gemma4:e2b")
         models.append(gemma_adapter.get_metadata())
 
+        # 4. DeepSeek R1 Distill 1.5B
+        deepseek_adapter = OllamaModelAdapter("deepseek-r1:1.5b")
+        models.append(deepseek_adapter.get_metadata())
+
         return models
 
     @classmethod
@@ -71,7 +82,7 @@ class ModelRegistry:
             return TransformersModelAdapter(model_id=canonical, revision=revision)
         elif canonical == "HuggingFaceTB/SmolLM2-1.7B-Instruct":
             return TransformersModelAdapter(model_id=canonical, revision=revision)
-        elif canonical == "gemma4:e2b":
+        elif canonical in OLLAMA_CATALOGUE or canonical in ("gemma4:e2b", "deepseek-r1:1.5b"):
             return OllamaModelAdapter(model_id=canonical, revision=revision)
         elif canonical.startswith("mock"):
             # Internal test simulator for unit tests and CI pipelines only

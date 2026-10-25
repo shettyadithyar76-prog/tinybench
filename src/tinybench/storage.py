@@ -50,6 +50,8 @@ class RunDatabase:
             cols = [c[1] for c in cursor.fetchall()]
             if "is_demo" not in cols:
                 conn.execute("ALTER TABLE evaluation_runs ADD COLUMN is_demo INTEGER DEFAULT 0")
+            # Ensure legacy mock runs are safely tagged as demo runs
+            conn.execute("UPDATE evaluation_runs SET is_demo = 1 WHERE model_id LIKE 'mock%' OR model_name LIKE '%Mock%'")
             conn.commit()
 
     def save_run(self, result: RunResult) -> Path:

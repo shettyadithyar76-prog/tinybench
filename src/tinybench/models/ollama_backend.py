@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from typing import Any
 import urllib.error
@@ -49,7 +50,32 @@ OLLAMA_CATALOGUE: dict[str, dict[str, Any]] = {
         ],
         "verification_timestamp": "2026-10-25T20:30:00Z",
         "description": "Google DeepMind's ultra-efficient 2B edge model with native audio/vision understanding and extended context, built for low-resource deployment.",
-    }
+    },
+    "deepseek-r1:1.5b": {
+        "model_name": "DeepSeek R1 Distill 1.5B",
+        "family": "DeepSeek-R1",
+        "developer": "DeepSeek AI",
+        "parameters": "1.5B",
+        "variant": "Distill Qwen (Reasoning)",
+        "license": "MIT",
+        "license_url": "https://opensource.org/licenses/MIT",
+        "license_is_osi_approved": True,
+        "supported_runtime": "ollama",
+        "runtime_model_id": "deepseek-r1:1.5b",
+        "weight_formats": ["Ollama blob", "GGUF"],
+        "downloadable_artifacts": ["deepseek-r1:1.5b (Ollama manifest & Q4_K_M blob)"],
+        "download_size": "1.1 GB",
+        "quantization": "4-bit (q4_K_M)",
+        "minimum_ram_mb": 1400.0,
+        "recommended_ram_mb": 2200.0,
+        "estimated_ram_mb": 1800.0,
+        "source_links": [
+            "https://ollama.com/library/deepseek-r1",
+            "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+        ],
+        "verification_timestamp": "2026-10-26T00:00:00Z",
+        "description": "DeepSeek's distilled 1.5B reasoning model with native chain-of-thought capabilities, optimized for edge reasoning on CPU.",
+    },
 }
 
 
@@ -300,6 +326,10 @@ class OllamaModelAdapter(BaseModelAdapter):
 
             wall_latency = round(time.perf_counter() - t0, 4)
             reply_text = data.get("response", "").strip()
+            # If model is a reasoning model (e.g. DeepSeek-R1), strip <think>...</think> for answer evaluation
+            clean_answer = re.sub(r"<think>.*?</think>", "", reply_text, flags=re.DOTALL).strip()
+            effective_text = clean_answer if clean_answer else reply_text
+
             prompt_tokens = data.get("prompt_eval_count")
             generated_tokens = data.get("eval_count")
             eval_duration_ns = data.get("eval_duration", 0)
@@ -310,7 +340,7 @@ class OllamaModelAdapter(BaseModelAdapter):
             )
 
             return GenerationResult(
-                text=reply_text,
+                text=effective_text,
                 prompt_tokens=prompt_tokens,
                 generated_tokens=generated_tokens,
                 latency_seconds=wall_latency,
@@ -318,6 +348,8 @@ class OllamaModelAdapter(BaseModelAdapter):
                     "runtime": "ollama",
                     "quantization": "4-bit (q4_K_M)",
                     "tokens_per_second": tok_per_sec,
+                    "raw_response": reply_text,
+                    "has_thinking_tags": "<think>" in reply_text,
                     "total_duration_ns": data.get("total_duration"),
                     "load_duration_ns": data.get("load_duration"),
                 },
