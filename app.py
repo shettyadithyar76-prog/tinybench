@@ -53,7 +53,7 @@ st.set_page_config(
 if "dark_mode" not in st.session_state:
     st.session_state["dark_mode"] = False
 
-is_dark = st.session_state["dark_mode"]
+is_dark = bool(st.session_state["dark_mode"])
 
 # ==============================================================================
 # DESIGN SYSTEM: Dual-Theme CSS Tokens (Pastel Light vs Dark Slate)
@@ -106,57 +106,221 @@ else:
     theme_vars = """
     :root {
         --surface-app: #FFFDF7;
-        --surface-shell: #F1F2FA;
+        --surface-shell: #F3F4F8;
         --surface-card: #FFFFFF;
-        --surface-nested: #F1F2FA;
-        --border-subtle: #E5E6ED;
-        --border-hover: #D5D8E2;
-        --text-primary: #1E1E2F;
-        --text-muted: #6E7282;
+        --surface-nested: #F3F4F8;
+        --border-subtle: #E2E4EB;
+        --border-hover: #CBD0DC;
+        --text-primary: #111827;
+        --text-muted: #4B5563;
         --btn-primary-bg: #F6A3CA;
         --btn-primary-border: #EE89B8;
-        --btn-primary-text: #1E1E2F;
+        --btn-primary-text: #111827;
         --btn-primary-hover: #F48DBF;
         --btn-shadow: rgba(246, 163, 202, 0.35);
         --kpi-mint-bg: #C0EFDC;
-        --kpi-mint-border: #A3DEC4;
-        --kpi-mint-text: #0F4B37;
-        --kpi-mint-sub: #15664C;
+        --kpi-mint-border: #9DE0C4;
+        --kpi-mint-text: #064E3B;
+        --kpi-mint-sub: #047857;
         --kpi-lilac-bg: #DED0F9;
-        --kpi-lilac-border: #C9B5F5;
-        --kpi-lilac-text: #3C236E;
-        --kpi-lilac-sub: #55349B;
+        --kpi-lilac-border: #CBB4F5;
+        --kpi-lilac-text: #3B0764;
+        --kpi-lilac-sub: #6D28D9;
         --kpi-butter-bg: #F9E7A8;
-        --kpi-butter-border: #EBD385;
-        --kpi-butter-text: #5F410A;
-        --kpi-butter-sub: #7D560E;
+        --kpi-butter-border: #E8D188;
+        --kpi-butter-text: #78350F;
+        --kpi-butter-sub: #B45309;
         --kpi-rose-bg: #FCEFF3;
         --kpi-rose-border: #F6A3CA;
-        --kpi-rose-text: #781E41;
-        --kpi-rose-sub: #9E2B58;
-        --tag-color: #F6A3CA;
-        --footer-bg: #F1F2FA;
-        --footer-border: #E5E6ED;
+        --kpi-rose-text: #831843;
+        --kpi-rose-sub: #BE185D;
+        --tag-color: #BE185D;
+        --footer-bg: #F3F4F8;
+        --footer-border: #E2E4EB;
         --badge-bg: #C0EFDC;
-        --badge-border: #A3DEC4;
-        --badge-text: #0F4B37;
+        --badge-border: #9DE0C4;
+        --badge-text: #064E3B;
     }
     """
-    chart_line_color = "#F6A3CA"
-    chart_marker_color = "#1E1E2F"
-    chart_bar_palette = ["#F6A3CA", "#C0EFDC", "#DED0F9"]
-    chart_radar_palette = ["#F6A3CA", "#C0EFDC", "#DED0F9", "#F9E7A8"]
+    chart_line_color = "#BE185D"
+    chart_marker_color = "#111827"
+    chart_bar_palette = ["#F6A3CA", "#A3DEC4", "#CBB4F5"]
+    chart_radar_palette = ["#F6A3CA", "#A3DEC4", "#CBB4F5", "#F9E7A8"]
 
 st.markdown(
     f"""
     <style>
     {theme_vars}
 
-    /* Global Root Surfaces */
-    .stApp {{
+    /* ==========================================================================
+       STREAMLIT NATIVE COMPONENT HIGH-CONTRAST TYPOGRAPHY OVERRIDES
+       ========================================================================== */
+
+    /* Global App Container */
+    .stApp,
+    .stAppViewContainer,
+    .main,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"] {{
         background-color: var(--surface-app) !important;
         color: var(--text-primary) !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }}
+
+    /* All Headings & Titles */
+    h1, h2, h3, h4, h5, h6,
+    div[data-testid="stMarkdownContainer"] h1,
+    div[data-testid="stMarkdownContainer"] h2,
+    div[data-testid="stMarkdownContainer"] h3,
+    div[data-testid="stMarkdownContainer"] h4,
+    div[data-testid="stMarkdownContainer"] h5,
+    div[data-testid="stMarkdownContainer"] h6 {{
+        color: var(--text-primary) !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        font-weight: 800 !important;
+    }}
+
+    /* Markdown Paragraphs, Lists, and Text */
+    div[data-testid="stMarkdownContainer"] p,
+    div[data-testid="stMarkdownContainer"] li,
+    div[data-testid="stMarkdownContainer"] ol,
+    div[data-testid="stMarkdownContainer"] ul,
+    div[data-testid="stMarkdownContainer"] strong,
+    div[data-testid="stMarkdownContainer"] em,
+    div[data-testid="stMarkdownContainer"] b,
+    div[data-testid="stMarkdownContainer"] span:not([class*="badge-"]):not([class*="kpi-"]) {{
+        color: var(--text-primary) !important;
+    }}
+
+    /* Widget Labels (All Inputs, Sliders, Dropdowns, Radios) */
+    div[data-testid="stWidgetLabel"] label,
+    div[data-testid="stWidgetLabel"] p,
+    div[data-testid="stWidgetLabel"] span {{
+        color: var(--text-primary) !important;
+        font-weight: 700 !important;
+        font-size: 0.88rem !important;
+    }}
+
+    /* Radio Controls (Sidebar Views & Preset Selectors) */
+    div[data-testid="stRadio"] label,
+    div[data-testid="stRadio"] div[role="radiogroup"] label,
+    div[data-testid="stRadio"] div[role="radiogroup"] span,
+    div[data-testid="stRadio"] div[role="radiogroup"] p,
+    div[data-baseweb="radio"] label,
+    div[data-baseweb="radio"] span,
+    div[data-baseweb="radio"] div {{
+        color: var(--text-primary) !important;
+        font-weight: 600 !important;
+    }}
+
+    /* Checkboxes & Toggles */
+    div[data-testid="stCheckbox"] label,
+    div[data-testid="stCheckbox"] span,
+    div[data-testid="stCheckbox"] p,
+    div[data-testid="stToggle"] label,
+    div[data-testid="stToggle"] span,
+    div[data-testid="stToggle"] p {{
+        color: var(--text-primary) !important;
+        font-weight: 600 !important;
+    }}
+
+    /* Selectbox & MultiSelect Dropdown Controls */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] *,
+    div[data-testid="stMultiSelect"] div[data-baseweb="select"] *,
+    div[data-baseweb="select"] *,
+    div[data-baseweb="popover"] *,
+    div[data-baseweb="menu"] *,
+    li[data-baseweb="menu-item"] * {{
+        color: var(--text-primary) !important;
+    }}
+    div[data-baseweb="select"] {{
+        background-color: var(--surface-card) !important;
+        border-color: var(--border-subtle) !important;
+    }}
+    div[data-baseweb="popover"],
+    ul[data-baseweb="menu"] {{
+        background-color: var(--surface-card) !important;
+        border: 1px solid var(--border-subtle) !important;
+    }}
+
+    /* Text Inputs & Number Inputs */
+    .stTextInput input,
+    .stNumberInput input,
+    .stTextArea textarea {{
+        color: var(--text-primary) !important;
+        background-color: var(--surface-card) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-radius: 8px !important;
+    }}
+
+    /* Sliders */
+    div[data-testid="stSlider"] div,
+    div[data-testid="stSlider"] span,
+    div[data-testid="stSlider"] p {{
+        color: var(--text-primary) !important;
+    }}
+
+    /* Expanders & Accordions */
+    div[data-testid="stExpander"] {{
+        background-color: var(--surface-card) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-radius: 12px !important;
+    }}
+    div[data-testid="stExpander"] details summary,
+    div[data-testid="stExpander"] details summary span,
+    div[data-testid="stExpander"] details summary p {{
+        color: var(--text-primary) !important;
+        font-weight: 700 !important;
+    }}
+    div[data-testid="stExpander"] details summary svg {{
+        fill: var(--text-primary) !important;
+    }}
+
+    /* Captions & Secondary Text */
+    .stCaption,
+    .stCaption p,
+    .stCaption span,
+    div[data-testid="stCaptionContainer"] p {{
+        color: var(--text-muted) !important;
+        font-size: 0.82rem !important;
+    }}
+
+    /* Dataframe and Tables */
+    div[data-testid="stDataFrame"],
+    div[data-testid="stTable"] {{
+        background-color: var(--surface-card) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-radius: 10px !important;
+    }}
+    div[data-testid="stDataFrame"] *,
+    div[data-testid="stTable"] * {{
+        color: var(--text-primary) !important;
+    }}
+
+    /* Code Snippets & Pre Blocks */
+    div[data-testid="stMarkdownContainer"] code {{
+        color: var(--text-primary) !important;
+        background-color: var(--surface-nested) !important;
+        border: 1px solid var(--border-subtle) !important;
+        padding: 2px 6px !important;
+        border-radius: 6px !important;
+    }}
+    .stCodeBlock, pre {{
+        background-color: var(--surface-nested) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-radius: 8px !important;
+    }}
+
+    /* Sidebar Surfaces & Navigation */
+    section[data-testid="stSidebar"],
+    div[data-testid="stSidebar"] {{
+        background-color: var(--surface-shell) !important;
+        border-right: 1px solid var(--border-subtle) !important;
+    }}
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] label {{
+        color: var(--text-primary) !important;
     }}
 
     /* Top Breadcrumb & Portal Bar */
@@ -171,19 +335,19 @@ st.markdown(
         font-weight: 700;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: var(--tag-color);
+        color: var(--tag-color) !important;
         font-family: "JetBrains Mono", monospace;
     }}
     .page-title {{
         font-size: 1.85rem;
         font-weight: 800;
-        color: var(--text-primary);
+        color: var(--text-primary) !important;
         letter-spacing: -0.03em;
         margin-bottom: 2px;
     }}
     .page-subtitle {{
         font-size: 0.92rem;
-        color: var(--text-muted);
+        color: var(--text-muted) !important;
         margin-bottom: 20px;
     }}
 
@@ -198,7 +362,7 @@ st.markdown(
         padding: 14px 20px;
         margin-bottom: 22px;
         font-size: 0.88rem;
-        color: var(--text-primary);
+        color: var(--text-primary) !important;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -217,21 +381,54 @@ st.markdown(
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
     }}
     .kpi-card-mint {{
-        background: var(--kpi-mint-bg);
-        border-color: var(--kpi-mint-border);
+        background: var(--kpi-mint-bg) !important;
+        border-color: var(--kpi-mint-border) !important;
     }}
     .kpi-card-lilac {{
-        background: var(--kpi-lilac-bg);
-        border-color: var(--kpi-lilac-border);
+        background: var(--kpi-lilac-bg) !important;
+        border-color: var(--kpi-lilac-border) !important;
     }}
     .kpi-card-butter {{
-        background: var(--kpi-butter-bg);
-        border-color: var(--kpi-butter-border);
+        background: var(--kpi-butter-bg) !important;
+        border-color: var(--kpi-butter-border) !important;
     }}
     .kpi-card-rose {{
-        background: var(--kpi-rose-bg);
-        border-color: var(--kpi-rose-border);
+        background: var(--kpi-rose-bg) !important;
+        border-color: var(--kpi-rose-border) !important;
     }}
+
+    .kpi-card-mint .kpi-title,
+    .kpi-card-mint .kpi-value {{
+        color: var(--kpi-mint-text) !important;
+    }}
+    .kpi-card-mint .kpi-sub {{
+        color: var(--kpi-mint-sub) !important;
+    }}
+
+    .kpi-card-lilac .kpi-title,
+    .kpi-card-lilac .kpi-value {{
+        color: var(--kpi-lilac-text) !important;
+    }}
+    .kpi-card-lilac .kpi-sub {{
+        color: var(--kpi-lilac-sub) !important;
+    }}
+
+    .kpi-card-butter .kpi-title,
+    .kpi-card-butter .kpi-value {{
+        color: var(--kpi-butter-text) !important;
+    }}
+    .kpi-card-butter .kpi-sub {{
+        color: var(--kpi-butter-sub) !important;
+    }}
+
+    .kpi-card-rose .kpi-title,
+    .kpi-card-rose .kpi-value {{
+        color: var(--kpi-rose-text) !important;
+    }}
+    .kpi-card-rose .kpi-sub {{
+        color: var(--kpi-rose-sub) !important;
+    }}
+
     .kpi-title {{
         font-size: 0.76rem;
         text-transform: uppercase;
@@ -252,13 +449,13 @@ st.markdown(
         display: flex;
         align-items: center;
         gap: 4px;
-        font-weight: 500;
+        font-weight: 600;
     }}
 
     /* Card Containers */
     .surface-card {{
-        background: var(--surface-card);
-        border: 1px solid var(--border-subtle);
+        background: var(--surface-card) !important;
+        border: 1px solid var(--border-subtle) !important;
         border-radius: 14px;
         padding: 22px 26px;
         margin-bottom: 22px;
@@ -267,7 +464,7 @@ st.markdown(
     .surface-card-title {{
         font-size: 1.05rem;
         font-weight: 700;
-        color: var(--text-primary);
+        color: var(--text-primary) !important;
         margin-bottom: 14px;
         display: flex;
         justify-content: space-between;
@@ -286,49 +483,43 @@ st.markdown(
         text-transform: uppercase;
     }}
     .badge-mint {{
-        background: var(--kpi-mint-bg);
-        color: var(--kpi-mint-text);
-        border: 1px solid var(--kpi-mint-border);
+        background: var(--kpi-mint-bg) !important;
+        color: var(--kpi-mint-text) !important;
+        border: 1px solid var(--kpi-mint-border) !important;
     }}
     .badge-lilac {{
-        background: var(--kpi-lilac-bg);
-        color: var(--kpi-lilac-text);
-        border: 1px solid var(--kpi-lilac-border);
+        background: var(--kpi-lilac-bg) !important;
+        color: var(--kpi-lilac-text) !important;
+        border: 1px solid var(--kpi-lilac-border) !important;
     }}
     .badge-butter {{
-        background: var(--kpi-butter-bg);
-        color: var(--kpi-butter-text);
-        border: 1px solid var(--kpi-butter-border);
+        background: var(--kpi-butter-bg) !important;
+        color: var(--kpi-butter-text) !important;
+        border: 1px solid var(--kpi-butter-border) !important;
     }}
     .badge-rose {{
-        background: var(--kpi-rose-bg);
-        color: var(--kpi-rose-text);
-        border: 1px solid var(--kpi-rose-border);
+        background: var(--kpi-rose-bg) !important;
+        color: var(--kpi-rose-text) !important;
+        border: 1px solid var(--kpi-rose-border) !important;
     }}
 
     /* Quick Action Card (Butter Yellow) */
     .quick-run-card {{
-        background: var(--kpi-butter-bg);
-        border: 1px solid var(--kpi-butter-border);
+        background: var(--kpi-butter-bg) !important;
+        border: 1px solid var(--kpi-butter-border) !important;
         border-radius: 14px;
         padding: 22px 24px;
         height: 100%;
-        color: var(--kpi-butter-text);
+        color: var(--kpi-butter-text) !important;
     }}
 
     /* Nested info blocks */
     .nested-box {{
-        background: var(--surface-nested);
-        border: 1px solid var(--border-subtle);
+        background: var(--surface-nested) !important;
+        border: 1px solid var(--border-subtle) !important;
         border-radius: 8px;
         padding: 12px;
-        color: var(--text-primary);
-    }}
-
-    /* Sidebar Styling */
-    div[data-testid="stSidebar"] {{
-        background-color: var(--surface-shell) !important;
-        border-right: 1px solid var(--border-subtle) !important;
+        color: var(--text-primary) !important;
     }}
 
     /* Primary Buttons */
@@ -378,16 +569,16 @@ st.markdown(
 
     /* Developer Footer */
     .developer-footer {{
-        background: var(--footer-bg);
-        border-top: 1px solid var(--footer-border);
+        background: var(--footer-bg) !important;
+        border-top: 1px solid var(--footer-border) !important;
         border-radius: 12px;
         padding: 26px 24px 18px 24px;
         margin-top: 45px;
-        color: var(--text-muted);
+        color: var(--text-muted) !important;
         font-size: 0.82rem;
     }}
     .footer-col-title {{
-        color: var(--text-primary);
+        color: var(--text-primary) !important;
         font-weight: 700;
         margin-bottom: 8px;
         text-transform: uppercase;
@@ -442,7 +633,7 @@ def apply_plotly_fig_theme(fig: go.Figure, height: int = 310, is_dark_mode: bool
             template="plotly_white",
             paper_bgcolor="#FFFFFF",
             plot_bgcolor="#FFFFFF",
-            font=dict(color="#1E1E2F", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=11),
+            font=dict(color="#111827", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=11),
             margin=dict(l=20, r=20, t=36, b=20),
             height=height,
             legend=dict(
@@ -451,18 +642,18 @@ def apply_plotly_fig_theme(fig: go.Figure, height: int = 310, is_dark_mode: bool
                 y=1.02,
                 xanchor="right",
                 x=1,
-                font=dict(size=10, color="#1E1E2F"),
+                font=dict(size=10, color="#111827"),
             ),
         )
         fig.update_xaxes(
-            gridcolor="#F1F2FA",
-            linecolor="#E5E6ED",
-            tickfont=dict(color="#6E7282"),
+            gridcolor="#F3F4F8",
+            linecolor="#E2E4EB",
+            tickfont=dict(color="#4B5563"),
         )
         fig.update_yaxes(
-            gridcolor="#F1F2FA",
-            linecolor="#E5E6ED",
-            tickfont=dict(color="#6E7282"),
+            gridcolor="#F3F4F8",
+            linecolor="#E2E4EB",
+            tickfont=dict(color="#4B5563"),
         )
     return fig
 
@@ -489,10 +680,24 @@ st.sidebar.markdown(
 
 # Dark Mode Toggle
 theme_toggle = st.sidebar.toggle(
-    "🌙 Dark Mode" if is_dark else "☀️ Light Mode",
-    value=is_dark,
-    key="dark_mode",
-    help="Toggle between Figma V2 Warm Pastel (Light) and Dark Slate (Dark) themes.",
+    "🌙 Dark Mode",
+    value=st.session_state["dark_mode"],
+    key="dark_mode_switch",
+    help="Toggle between Warm Ivory Light Mode and Obsidian Dark Slate Mode.",
+)
+if theme_toggle != st.session_state["dark_mode"]:
+    st.session_state["dark_mode"] = theme_toggle
+    st.rerun()
+
+mode_label = "Dark Slate Mode 🌙" if is_dark else "Warm Ivory Light Mode ☀️"
+mode_badge_style = "badge-rose" if is_dark else "badge-mint"
+st.sidebar.markdown(
+    f"""
+    <div style="margin-top: -6px; margin-bottom: 12px;">
+        <span class="badge-pill {mode_badge_style}" style="font-size: 0.70rem;">{mode_label}</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 st.sidebar.divider()
@@ -1385,12 +1590,12 @@ elif nav_choice == "Model Comparison":
                 polar_bg = "#111827" if is_dark else "#FFFFFF"
                 fig_radar.update_layout(
                     polar=dict(
-                        radialaxis=dict(visible=True, range=[0, 100], gridcolor="rgba(255,255,255,0.08)" if is_dark else "#F1F2FA", linecolor="rgba(255,255,255,0.1)" if is_dark else "#E5E6ED"),
-                        angularaxis=dict(gridcolor="rgba(255,255,255,0.08)" if is_dark else "#F1F2FA", linecolor="rgba(255,255,255,0.1)" if is_dark else "#E5E6ED", color="#94A3B8" if is_dark else "#1E1E2F"),
+                        radialaxis=dict(visible=True, range=[0, 100], gridcolor="rgba(255,255,255,0.08)" if is_dark else "#F3F4F8", linecolor="rgba(255,255,255,0.1)" if is_dark else "#E2E4EB"),
+                        angularaxis=dict(gridcolor="rgba(255,255,255,0.08)" if is_dark else "#F3F4F8", linecolor="rgba(255,255,255,0.1)" if is_dark else "#E2E4EB", color="#94A3B8" if is_dark else "#111827"),
                         bgcolor=polar_bg,
                     ),
                     paper_bgcolor=polar_bg,
-                    font=dict(color="#94A3B8" if is_dark else "#1E1E2F", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=10),
+                    font=dict(color="#94A3B8" if is_dark else "#111827", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=10),
                     margin=dict(l=30, r=30, t=30, b=30),
                     height=290,
                     legend=dict(orientation="h", y=-0.2, font=dict(size=10)),
