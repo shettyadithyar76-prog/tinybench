@@ -169,13 +169,6 @@ class TransformersModelAdapter(BaseModelAdapter):
     def load(self) -> float:
         """Load tokenizer and model weights onto CPU with hardware safety checks."""
         meta = self.get_metadata()
-        avail_ram_mb = psutil.virtual_memory().available / (1024 * 1024)
-
-        if avail_ram_mb < meta.minimum_ram_mb:
-            raise ResourceLimitError(
-                f"Insufficient system memory: {self.model_id} requires at least {meta.minimum_ram_mb:.0f} MB RAM, "
-                f"but only {avail_ram_mb:.0f} MB is available on this system."
-            )
 
         token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
         if self.model_id == "meta-llama/Llama-3.2-1B-Instruct" and not token:
@@ -187,6 +180,13 @@ class TransformersModelAdapter(BaseModelAdapter):
                     "You must accept Meta's license at https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct "
                     "and supply your Hugging Face access token via the HF_TOKEN environment variable."
                 )
+
+        avail_ram_mb = psutil.virtual_memory().available / (1024 * 1024)
+        if avail_ram_mb < meta.minimum_ram_mb:
+            raise ResourceLimitError(
+                f"Insufficient system memory: {self.model_id} requires at least {meta.minimum_ram_mb:.0f} MB RAM, "
+                f"but only {avail_ram_mb:.0f} MB is available on this system."
+            )
 
         try:
             import torch

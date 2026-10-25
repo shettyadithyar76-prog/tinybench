@@ -103,6 +103,26 @@ def is_ollama_model_installed(
     return False
 
 
+def is_ollama_model_running(
+    model_tag: str = "gemma4:e2b",
+    base_url: str = DEFAULT_OLLAMA_URL,
+    timeout: float = 2.0,
+) -> bool:
+    """Check if model is currently resident in Ollama's active memory via /api/ps."""
+    url = f"{base_url.rstrip('/')}/api/ps"
+    try:
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode("utf-8"))
+                running_names = [m.get("name", "").lower() for m in data.get("models", [])]
+                clean = model_tag.lower().strip()
+                return any(clean in name or name.startswith(clean) for name in running_names)
+    except Exception:
+        pass
+    return False
+
+
 class OllamaModelAdapter(BaseModelAdapter):
     """Adapter for running verified models via the local Ollama runtime engine."""
 
@@ -193,15 +213,6 @@ class OllamaModelAdapter(BaseModelAdapter):
 
     def load(self) -> float:
         """Verify Ollama runtime health and model presence before running benchmark."""
-        meta = self.get_metadata()
-        avail_ram_mb = psutil.virtual_memory().available / (1024 * 1024)
-
-        if avail_ram_mb < meta.minimum_ram_mb:
-            raise ResourceLimitError(
-                f"Insufficient memory: {self.model_id} requires at least {meta.minimum_ram_mb:.0f} MB RAM, "
-                f"but only {avail_ram_mb:.0f} MB is available on this system."
-            )
-
         is_running, err_msg = check_ollama_daemon(self.base_url)
         if not is_running:
             raise RuntimeUnavailableError(err_msg)
@@ -210,6 +221,16 @@ class OllamaModelAdapter(BaseModelAdapter):
             raise ModelLoadError(
                 f"Model '{self.model_id}' is not installed in local Ollama storage. "
                 f"Execute 'ollama pull {self.model_id}' or initiate download from TinyBench UI before benchmarking."
+            )
+
+        meta = self.get_metadata()
+        is_already_resident = is_ollama_model_running(self.model_id, self.base_url)
+        avail_ram_mb = psutil.virtual_memory().available / (1024 * 1024)
+
+        if not is_already_resident and avail_ram_mb < meta.minimum_ram_mb:
+            raise ResourceLimitError(
+                f"Insufficient memory: {self.model_id} requires at least {meta.minimum_ram_mb:.0f} MB RAM to load, "
+                f"but only {avail_ram_mb:.0f} MB is available on this system."
             )
 
         t0 = time.perf_counter()
