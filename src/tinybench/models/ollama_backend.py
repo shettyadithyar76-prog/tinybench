@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import time
 from typing import Any
@@ -22,7 +23,14 @@ from tinybench.models.base import BaseModelAdapter, GenerationResult, ModelMetad
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_OLLAMA_URL = "http://localhost:11434"
+def get_ollama_base_url() -> str:
+    """Retrieve effective Ollama daemon endpoint URL from environment or default."""
+    url = os.environ.get("OLLAMA_HOST") or os.environ.get("OLLAMA_BASE_URL") or "http://localhost:11434"
+    if not url.startswith(("http://", "https://")):
+        url = f"http://{url}"
+    return url.rstrip("/")
+
+DEFAULT_OLLAMA_URL = get_ollama_base_url()
 
 # Verified metadata for approved Ollama models
 OLLAMA_CATALOGUE: dict[str, dict[str, Any]] = {
@@ -79,13 +87,14 @@ OLLAMA_CATALOGUE: dict[str, dict[str, Any]] = {
 }
 
 
-def check_ollama_daemon(base_url: str = DEFAULT_OLLAMA_URL, timeout: float = 2.0) -> tuple[bool, str]:
+def check_ollama_daemon(base_url: str | None = None, timeout: float = 2.0) -> tuple[bool, str]:
     """Check if local Ollama service daemon is reachable and responding.
 
     Returns:
         Tuple of (is_reachable, version_or_error_message).
     """
-    url = f"{base_url.rstrip('/')}/api/version"
+    effective_url = (base_url or get_ollama_base_url()).rstrip("/")
+    url = f"{effective_url}/api/version"
     try:
         req = urllib.request.Request(url, method="GET")
         with urllib.request.urlopen(req, timeout=timeout) as response:
@@ -95,23 +104,25 @@ def check_ollama_daemon(base_url: str = DEFAULT_OLLAMA_URL, timeout: float = 2.0
                 return True, f"Ollama {version} active"
     except Exception as exc:
         return False, (
-            f"Ollama daemon is not reachable at {base_url}. "
-            "Please ensure Ollama is installed (https://ollama.com) and running ('ollama serve')."
+            f"Ollama daemon is not reachable at {effective_url}. "
+            "Please ensure Ollama is installed (https://ollama.com) and running ('ollama serve'), "
+            "or configure OLLAMA_HOST if using a remote or tunneled daemon."
         )
     return False, "Ollama daemon returned non-200 status code."
 
 
 def is_ollama_model_installed(
     model_tag: str = "gemma4:e2b",
-    base_url: str = DEFAULT_OLLAMA_URL,
+    base_url: str | None = None,
     timeout: float = 2.0,
 ) -> bool:
     """Verify whether a specific model tag is already pulled and available in Ollama."""
-    is_running, _ = check_ollama_daemon(base_url, timeout=timeout)
+    effective_url = (base_url or get_ollama_base_url()).rstrip("/")
+    is_running, _ = check_ollama_daemon(effective_url, timeout=timeout)
     if not is_running:
         return False
 
-    url = f"{base_url.rstrip('/')}/api/tags"
+    url = f"{effective_url}/api/tags"
     try:
         req = urllib.request.Request(url, method="GET")
         with urllib.request.urlopen(req, timeout=timeout) as response:
@@ -131,11 +142,12 @@ def is_ollama_model_installed(
 
 def is_ollama_model_running(
     model_tag: str = "gemma4:e2b",
-    base_url: str = DEFAULT_OLLAMA_URL,
+    base_url: str | None = None,
     timeout: float = 2.0,
 ) -> bool:
     """Check if model is currently resident in Ollama's active memory via /api/ps."""
-    url = f"{base_url.rstrip('/')}/api/ps"
+    effective_url = (base_url or get_ollama_base_url()).rstrip("/")
+    url = f"{effective_url}/api/ps"
     try:
         req = urllib.request.Request(url, method="GET")
         with urllib.request.urlopen(req, timeout=timeout) as response:
@@ -155,11 +167,11 @@ class OllamaModelAdapter(BaseModelAdapter):
     def __init__(
         self,
         model_id: str = "gemma4:e2b",
-        base_url: str = DEFAULT_OLLAMA_URL,
+        base_url: str | None = None,
         revision: str | None = None,
     ) -> None:
         super().__init__(model_id=model_id, revision=revision)
-        self.base_url = base_url.rstrip("/")
+        self.base_url = (base_url or get_ollama_base_url()).rstrip("/")
         self.load_duration: float = 0.0
 
     def get_metadata(self) -> ModelMetadata:

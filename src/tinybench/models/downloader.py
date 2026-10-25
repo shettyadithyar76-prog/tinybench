@@ -19,6 +19,7 @@ from tinybench.exceptions import (
 )
 from tinybench.models.ollama_backend import (
     check_ollama_daemon,
+    get_ollama_base_url,
     is_ollama_model_installed,
 )
 
@@ -93,17 +94,18 @@ def download_model(
 
     # 2. Ollama model download path
     if clean_id in ("gemma4:e2b", "deepseek-r1:1.5b") or ":" in clean_id or clean_id.startswith(("gemma4", "deepseek")):
-        is_running, daemon_msg = check_ollama_daemon()
+        ollama_url = get_ollama_base_url()
+        is_running, daemon_msg = check_ollama_daemon(ollama_url)
         if not is_running:
             raise RuntimeUnavailableError(daemon_msg)
 
         if progress_callback:
-            progress_callback(f"Connecting to local Ollama daemon for {clean_id}...", 0.05)
+            progress_callback(f"Connecting to Ollama daemon ({ollama_url}) for {clean_id}...", 0.05)
 
         try:
             req_data = json.dumps({"name": clean_id, "stream": True}).encode("utf-8")
             req = urllib.request.Request(
-                "http://localhost:11434/api/pull",
+                f"{ollama_url}/api/pull",
                 data=req_data,
                 headers={"Content-Type": "application/json"},
                 method="POST",
@@ -126,7 +128,7 @@ def download_model(
                         continue
 
             # Verify installation
-            if is_ollama_model_installed(clean_id):
+            if is_ollama_model_installed(clean_id, base_url=ollama_url):
                 if progress_callback:
                     progress_callback(f"Successfully installed {clean_id} in Ollama.", 1.0)
                 return f"ollama:{clean_id}"

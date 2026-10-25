@@ -45,7 +45,7 @@ try:
     from tinybench.benchmarks.validator import validate_dataset_file
     from tinybench.config import BenchmarkConfig, GenerationConfig, SystemInfo
     from tinybench.models.downloader import download_model, is_model_installed
-    from tinybench.models.ollama_backend import check_ollama_daemon
+    from tinybench.models.ollama_backend import check_ollama_daemon, get_ollama_base_url
     from tinybench.models.registry import APPROVED_MODEL_IDS, ModelRegistry
     from tinybench.reporting import export_run_csv, generate_comparison_table
     from tinybench.runner import BenchmarkRunner, RunResult, TaskResult
@@ -1080,6 +1080,35 @@ elif nav_choice == "Run Benchmark":
                 type="password",
                 help="Required to download Llama 3.2 weights after accepting terms at https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct",
             )
+
+        if model_target in ("gemma4:e2b", "deepseek-r1:1.5b"):
+            current_ollama_url = get_ollama_base_url()
+            is_ollama_active, daemon_status = check_ollama_daemon(current_ollama_url)
+
+            with st.expander("🔌 Ollama Connection & Remote Endpoint Settings", expanded=not is_ollama_active):
+                ollama_url_input = st.text_input(
+                    "Ollama Daemon Endpoint URL",
+                    value=current_ollama_url,
+                    help="Default: http://localhost:11434. When running on Streamlit Community Cloud (*.streamlit.app), your cloud container cannot reach your computer's localhost. Enter a public tunnel URL (e.g. from ngrok) or run TinyBench locally on your laptop.",
+                )
+                if ollama_url_input and ollama_url_input.strip() != current_ollama_url:
+                    clean_input = ollama_url_input.strip()
+                    os.environ["OLLAMA_HOST"] = clean_input
+                    os.environ["OLLAMA_BASE_URL"] = clean_input
+                    st.rerun()
+
+                if is_ollama_active:
+                    st.success(f"🟢 **Daemon Connected**: {daemon_status} at `{current_ollama_url}`")
+                else:
+                    st.warning(
+                        f"⚠️ **Ollama Daemon Unreachable at `{current_ollama_url}`**\n\n"
+                        "**Why this happens:**\n"
+                        "- If you are using TinyBench on **Streamlit Community Cloud (`streamlit.app`)**, the cloud container cannot access `localhost` on your personal laptop where Ollama is installed.\n\n"
+                        "**How to run this model:**\n"
+                        "1. **Run Locally (Recommended)**: Open a terminal on your laptop and run `streamlit run app.py` — it connects to your local Ollama automatically!\n"
+                        "2. **Connect via Public Tunnel**: Run `ngrok http 11434` on your laptop, and paste your public forwarding URL (e.g. `https://xxxx.ngrok-free.app`) into the field above.\n"
+                        "3. **Ensure Ollama is Serving**: On your laptop, verify Ollama is active by running `ollama serve` or checking that the Ollama taskbar app is running."
+                    )
 
         st.markdown("#### 02. Choose Benchmark Dataset")
         dataset_path_str = st.text_input("Benchmark Dataset", "datasets/basic_v1.jsonl")
