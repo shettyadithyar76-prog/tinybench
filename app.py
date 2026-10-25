@@ -981,6 +981,15 @@ elif nav_choice == "Run Benchmark":
                 <div class="page-title">Configure and Benchmark Run</div>
                 <div class="page-subtitle">Select model, benchmark dataset, parameters and execution environment.</div>
             </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col_setup, col_meta = st.columns([1.6, 1.4])
+
+    with col_setup:
+        st.markdown("#### 01. Choose Approved Model")
         model_options = [
             "Gemma 4 E2B (gemma4:e2b - Ollama)",
             "DeepSeek R1 Distill 1.5B (deepseek-r1:1.5b - Ollama)",
@@ -998,15 +1007,6 @@ elif nav_choice == "Run Benchmark":
             model_target = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
         elif "Llama" in selected_model_option:
             model_target = "meta-llama/Llama-3.2-1B-Instruct"
-        else:
-            model_target = "mock"
-
-        if "SmolLM2" in selected_model_option:
-            model_target = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
-        elif "Llama" in selected_model_option:
-            model_target = "meta-llama/Llama-3.2-1B-Instruct"
-        elif "Gemma" in selected_model_option:
-            model_target = "gemma4:e2b"
         else:
             model_target = "mock"
 
@@ -1053,6 +1053,8 @@ elif nav_choice == "Run Benchmark":
         st.markdown("#### 🔍 Hardware Safety & Model Profile")
         adapter_preview = ModelRegistry.get_adapter(model_target)
         meta = adapter_preview.get_metadata()
+        meta_min_ram = int(getattr(meta, 'minimum_ram_mb', 2000))
+        meta_rec_ram = int(getattr(meta, 'recommended_ram_mb', 4000))
 
         is_mock_selected = "mock" in meta.backend_type.lower()
         is_installed = is_model_installed(meta.model_id) if not is_mock_selected else True
@@ -1083,8 +1085,8 @@ elif nav_choice == "Run Benchmark":
                     <div><span style="color: var(--text-muted);">Quantization:</span> <span style="color: var(--text-primary); font-weight: 600;">{getattr(meta, 'quantization', 'Not verified')}</span></div>
                     <div><span style="color: var(--text-muted);">License:</span> <span style="color: var(--text-primary); font-weight: 600;">{meta.license}</span></div>
                     <div><span style="color: var(--text-muted);">Runtime:</span> <span style="color: var(--text-primary); font-weight: 600;">{meta.supported_runtime}</span></div>
-                    <div><span style="color: var(--text-muted);">Min RAM:</span> <span style="color: var(--kpi-mint-text); font-weight: 700;">{getattr(meta, 'minimum_ram_mb', 2000.0):.0f} MB</span></div>
-                    <div><span style="color: var(--text-muted);">Rec. RAM:</span> <span style="color: var(--kpi-mint-text); font-weight: 700;">{getattr(meta, 'recommended_ram_mb', 4000.0):.0f} MB</span></div>
+                    <div><span style="color: var(--text-muted);">Min RAM:</span> <span style="color: var(--kpi-mint-text); font-weight: 700;">{meta_min_ram} MB</span></div>
+                    <div><span style="color: var(--text-muted);">Rec. RAM:</span> <span style="color: var(--kpi-mint-text); font-weight: 700;">{meta_rec_ram} MB</span></div>
                 </div>
             </div>
             """,
@@ -1735,8 +1737,8 @@ elif nav_choice == "05. Models & Datasets" or nav_choice == "Models & Datasets":
                             <div><span style="color: var(--text-muted);">Quantization:</span><br><span style="color: var(--text-primary); font-weight: 600;">{getattr(m, 'quantization', 'Not verified')}</span></div>
                             <div><span style="color: var(--text-muted);">License:</span><br><a href="{getattr(m, 'license_url', '#')}" target="_blank" style="color: var(--tag-color); font-weight: 600;">{m.license}</a></div>
                             <div><span style="color: var(--text-muted);">Runtime:</span><br><span style="color: var(--text-primary); font-weight: 600;">{getattr(m, 'supported_runtime', m.backend_type)}</span></div>
-                            <div><span style="color: var(--text-muted);">Min / Rec. RAM:</span><br><span style="color: var(--kpi-mint-text); font-weight: 700;">{getattr(m, 'minimum_ram_mb', 2000.0):.0f} / {getattr(m, 'recommended_ram_mb', 4000.0):.0f} MB</span></div>
-                            <div><span style="color: var(--text-muted);">Verified:</span><br><span style="color: var(--text-muted);">{getattr(m, 'verification_timestamp', '2026-10-25T20:30:00Z')[:10]}</span></div>
+                            <div><span style="color: var(--text-muted);">Min / Rec. RAM:</span><br><span style="color: var(--kpi-mint-text); font-weight: 700;">{m_min_ram} / {m_rec_ram} MB</span></div>
+                            <div><span style="color: var(--text-muted);">Verified:</span><br><span style="color: var(--text-muted);">{m_verified}</span></div>
                         </div>
                         {f'<div style="font-size: 0.76rem; color: {status_color}; font-weight: 600; padding: 6px 10px; background: var(--surface-app); border-radius: 6px;">ℹ️ {m.status_reason}</div>' if getattr(m, 'status_reason', None) else ''}
                     </div>
