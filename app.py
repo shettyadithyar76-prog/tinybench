@@ -1,16 +1,10 @@
 """TinyBench Streamlit Dashboard - Interactive Research & Evaluation Interface.
 
-Pixel-perfect implementation aligned with the Figma V2 Design System specification:
-- Warm Ivory Canvas (#FFFDF7)
-- Ice Lavender Shell & Containers (#F1F2FA)
-- Pastel Bento Metric Cards:
-  * Mint (#C0EFDC) for Throughput / Accuracy
-  * Lilac (#DED0F9) for Latency / Context
-  * Butter (#F9E7A8) for Memory / Advisory
-  * Rose (#F6A3CA) for Primary CTAs & Featured Selection
-- Charcoal Typography (#1E1E2F) with WCAG AA compliance
-- 7 Connected Artboard Experience: Overview, Mobile, Benchmark Runner,
-  Run Details, Model Comparison (V2), Models & Datasets (V2), Methodology (V2)
+Pixel-perfect implementation supporting dual themes with instant toggle:
+- Light Mode: Warm Ivory Canvas (#FFFDF7), Soft Pastel Neumorphic Bento Cards (#C0EFDC, #DED0F9, #F9E7A8, #F6A3CA)
+- Dark Mode: Obsidian Slate Canvas (#070A0F, #111827), Glowing Cyan & Violet Precision (#06B6D4, #8B5CF6)
+- Persistent state toggle in sidebar
+- Comprehensive 6-screen architecture with unified telemetry
 """
 
 from __future__ import annotations
@@ -55,136 +49,233 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Initialize theme state
+if "dark_mode" not in st.session_state:
+    st.session_state["dark_mode"] = False
+
+is_dark = st.session_state["dark_mode"]
+
 # ==============================================================================
-# DESIGN SYSTEM: Figma V2 Warm Cream & Pastel Neumorphic Theme Tokens
+# DESIGN SYSTEM: Dual-Theme CSS Tokens (Pastel Light vs Dark Slate)
 # ==============================================================================
-st.markdown(
-    """
-    <style>
-    /* Global Root Surfaces */
-    .stApp {
-        background-color: #FFFDF7 !important;
-        color: #1E1E2F !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+if is_dark:
+    theme_vars = """
+    :root {
+        --surface-app: #070A0F;
+        --surface-shell: #0B0F17;
+        --surface-card: #111827;
+        --surface-nested: #0B0F17;
+        --border-subtle: rgba(255, 255, 255, 0.08);
+        --border-hover: rgba(6, 182, 212, 0.4);
+        --text-primary: #F8FAFC;
+        --text-muted: #94A3B8;
+        --btn-primary-bg: #06B6D4;
+        --btn-primary-border: #0891B2;
+        --btn-primary-text: #070A0F;
+        --btn-primary-hover: #22D3EE;
+        --btn-shadow: rgba(6, 182, 212, 0.25);
+        --kpi-mint-bg: rgba(16, 185, 129, 0.12);
+        --kpi-mint-border: rgba(16, 185, 129, 0.35);
+        --kpi-mint-text: #34D399;
+        --kpi-mint-sub: #10B981;
+        --kpi-lilac-bg: rgba(139, 92, 246, 0.12);
+        --kpi-lilac-border: rgba(139, 92, 246, 0.35);
+        --kpi-lilac-text: #A78BFA;
+        --kpi-lilac-sub: #8B5CF6;
+        --kpi-butter-bg: rgba(245, 158, 11, 0.12);
+        --kpi-butter-border: rgba(245, 158, 11, 0.35);
+        --kpi-butter-text: #FBBF24;
+        --kpi-butter-sub: #F59E0B;
+        --kpi-rose-bg: rgba(244, 63, 94, 0.12);
+        --kpi-rose-border: rgba(244, 63, 94, 0.35);
+        --kpi-rose-text: #FB7185;
+        --kpi-rose-sub: #F43F5E;
+        --tag-color: #06B6D4;
+        --footer-bg: #090D13;
+        --footer-border: rgba(255, 255, 255, 0.08);
+        --badge-bg: rgba(6, 182, 212, 0.12);
+        --badge-border: rgba(6, 182, 212, 0.3);
+        --badge-text: #22D3EE;
     }
+    """
+    chart_line_color = "#06B6D4"
+    chart_marker_color = "#22D3EE"
+    chart_bar_palette = ["#06B6D4", "#10B981", "#A78BFA"]
+    chart_radar_palette = ["#06B6D4", "#A78BFA", "#34D399", "#F59E0B"]
+else:
+    theme_vars = """
+    :root {
+        --surface-app: #FFFDF7;
+        --surface-shell: #F1F2FA;
+        --surface-card: #FFFFFF;
+        --surface-nested: #F1F2FA;
+        --border-subtle: #E5E6ED;
+        --border-hover: #D5D8E2;
+        --text-primary: #1E1E2F;
+        --text-muted: #6E7282;
+        --btn-primary-bg: #F6A3CA;
+        --btn-primary-border: #EE89B8;
+        --btn-primary-text: #1E1E2F;
+        --btn-primary-hover: #F48DBF;
+        --btn-shadow: rgba(246, 163, 202, 0.35);
+        --kpi-mint-bg: #C0EFDC;
+        --kpi-mint-border: #A3DEC4;
+        --kpi-mint-text: #0F4B37;
+        --kpi-mint-sub: #15664C;
+        --kpi-lilac-bg: #DED0F9;
+        --kpi-lilac-border: #C9B5F5;
+        --kpi-lilac-text: #3C236E;
+        --kpi-lilac-sub: #55349B;
+        --kpi-butter-bg: #F9E7A8;
+        --kpi-butter-border: #EBD385;
+        --kpi-butter-text: #5F410A;
+        --kpi-butter-sub: #7D560E;
+        --kpi-rose-bg: #FCEFF3;
+        --kpi-rose-border: #F6A3CA;
+        --kpi-rose-text: #781E41;
+        --kpi-rose-sub: #9E2B58;
+        --tag-color: #F6A3CA;
+        --footer-bg: #F1F2FA;
+        --footer-border: #E5E6ED;
+        --badge-bg: #C0EFDC;
+        --badge-border: #A3DEC4;
+        --badge-text: #0F4B37;
+    }
+    """
+    chart_line_color = "#F6A3CA"
+    chart_marker_color = "#1E1E2F"
+    chart_bar_palette = ["#F6A3CA", "#C0EFDC", "#DED0F9"]
+    chart_radar_palette = ["#F6A3CA", "#C0EFDC", "#DED0F9", "#F9E7A8"]
+
+st.markdown(
+    f"""
+    <style>
+    {theme_vars}
+
+    /* Global Root Surfaces */
+    .stApp {{
+        background-color: var(--surface-app) !important;
+        color: var(--text-primary) !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }}
 
     /* Top Breadcrumb & Portal Bar */
-    .portal-bar {
+    .portal-bar {{
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 8px;
-    }
-    .portal-tag {
+    }}
+    .portal-tag {{
         font-size: 0.72rem;
         font-weight: 700;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: #F6A3CA;
+        color: var(--tag-color);
         font-family: "JetBrains Mono", monospace;
-    }
-    .page-title {
+    }}
+    .page-title {{
         font-size: 1.85rem;
         font-weight: 800;
-        color: #1E1E2F;
+        color: var(--text-primary);
         letter-spacing: -0.03em;
         margin-bottom: 2px;
-    }
-    .page-subtitle {
+    }}
+    .page-subtitle {{
         font-size: 0.92rem;
-        color: #6E7282;
+        color: var(--text-muted);
         margin-bottom: 20px;
-    }
+    }}
 
     /* Info Callout Banner */
-    .info-callout {
-        background: #F1F2FA;
-        border-left: 4px solid #F6A3CA;
-        border-top: 1px solid #E5E6ED;
-        border-right: 1px solid #E5E6ED;
-        border-bottom: 1px solid #E5E6ED;
+    .info-callout {{
+        background: var(--surface-shell);
+        border-left: 4px solid var(--tag-color);
+        border-top: 1px solid var(--border-subtle);
+        border-right: 1px solid var(--border-subtle);
+        border-bottom: 1px solid var(--border-subtle);
         border-radius: 10px;
         padding: 14px 20px;
         margin-bottom: 22px;
         font-size: 0.88rem;
-        color: #1E1E2F;
+        color: var(--text-primary);
         display: flex;
         justify-content: space-between;
         align-items: center;
-    }
+    }}
 
-    /* 4-Card Pastel Bento Grid */
-    .kpi-card {
+    /* 4-Card Bento Grid */
+    .kpi-card {{
         border-radius: 14px;
         padding: 18px 22px;
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         height: 100%;
-        border: 1px solid #E5E6ED;
-    }
-    .kpi-card:hover {
+        border: 1px solid var(--border-subtle);
+    }}
+    .kpi-card:hover {{
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-    }
-    .kpi-card-mint {
-        background: #C0EFDC;
-        border-color: #A3DEC4;
-    }
-    .kpi-card-lilac {
-        background: #DED0F9;
-        border-color: #C9B5F5;
-    }
-    .kpi-card-butter {
-        background: #F9E7A8;
-        border-color: #EBD385;
-    }
-    .kpi-card-rose {
-        background: #FCEFF3;
-        border-color: #F6A3CA;
-    }
-    .kpi-title {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    }}
+    .kpi-card-mint {{
+        background: var(--kpi-mint-bg);
+        border-color: var(--kpi-mint-border);
+    }}
+    .kpi-card-lilac {{
+        background: var(--kpi-lilac-bg);
+        border-color: var(--kpi-lilac-border);
+    }}
+    .kpi-card-butter {{
+        background: var(--kpi-butter-bg);
+        border-color: var(--kpi-butter-border);
+    }}
+    .kpi-card-rose {{
+        background: var(--kpi-rose-bg);
+        border-color: var(--kpi-rose-border);
+    }}
+    .kpi-title {{
         font-size: 0.76rem;
         text-transform: uppercase;
         font-weight: 700;
         letter-spacing: 0.06em;
         margin-bottom: 6px;
-    }
-    .kpi-value {
+    }}
+    .kpi-value {{
         font-size: 2.1rem;
         font-weight: 800;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         letter-spacing: -0.04em;
         line-height: 1.1;
-    }
-    .kpi-sub {
+    }}
+    .kpi-sub {{
         font-size: 0.78rem;
         margin-top: 6px;
         display: flex;
         align-items: center;
         gap: 4px;
         font-weight: 500;
-    }
+    }}
 
     /* Card Containers */
-    .surface-card {
-        background: #FFFFFF;
-        border: 1px solid #E5E6ED;
+    .surface-card {{
+        background: var(--surface-card);
+        border: 1px solid var(--border-subtle);
         border-radius: 14px;
         padding: 22px 26px;
         margin-bottom: 22px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-    }
-    .surface-card-title {
+    }}
+    .surface-card-title {{
         font-size: 1.05rem;
         font-weight: 700;
-        color: #1E1E2F;
+        color: var(--text-primary);
         margin-bottom: 14px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-    }
+    }}
 
     /* Badges & Pills */
-    .badge-pill {
+    .badge-pill {{
         display: inline-flex;
         align-items: center;
         padding: 4px 10px;
@@ -193,170 +284,217 @@ st.markdown(
         font-weight: 700;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-    }
-    .badge-mint {
-        background: #C0EFDC;
-        color: #0F4B37;
-        border: 1px solid #A3DEC4;
-    }
-    .badge-lilac {
-        background: #DED0F9;
-        color: #3C236E;
-        border: 1px solid #C9B5F5;
-    }
-    .badge-butter {
-        background: #F9E7A8;
-        color: #5F410A;
-        border: 1px solid #EBD385;
-    }
-    .badge-rose {
-        background: #F6A3CA;
-        color: #1E1E2F;
-        border: 1px solid #EE89B8;
-    }
+    }}
+    .badge-mint {{
+        background: var(--kpi-mint-bg);
+        color: var(--kpi-mint-text);
+        border: 1px solid var(--kpi-mint-border);
+    }}
+    .badge-lilac {{
+        background: var(--kpi-lilac-bg);
+        color: var(--kpi-lilac-text);
+        border: 1px solid var(--kpi-lilac-border);
+    }}
+    .badge-butter {{
+        background: var(--kpi-butter-bg);
+        color: var(--kpi-butter-text);
+        border: 1px solid var(--kpi-butter-border);
+    }}
+    .badge-rose {{
+        background: var(--kpi-rose-bg);
+        color: var(--kpi-rose-text);
+        border: 1px solid var(--kpi-rose-border);
+    }}
 
     /* Quick Action Card (Butter Yellow) */
-    .quick-run-card {
-        background: #F9E7A8;
-        border: 1px solid #EBD385;
+    .quick-run-card {{
+        background: var(--kpi-butter-bg);
+        border: 1px solid var(--kpi-butter-border);
         border-radius: 14px;
         padding: 22px 24px;
         height: 100%;
-    }
+        color: var(--kpi-butter-text);
+    }}
+
+    /* Nested info blocks */
+    .nested-box {{
+        background: var(--surface-nested);
+        border: 1px solid var(--border-subtle);
+        border-radius: 8px;
+        padding: 12px;
+        color: var(--text-primary);
+    }}
 
     /* Sidebar Styling */
-    div[data-testid="stSidebar"] {
-        background-color: #F1F2FA !important;
-        border-right: 1px solid #E5E6ED !important;
-    }
+    div[data-testid="stSidebar"] {{
+        background-color: var(--surface-shell) !important;
+        border-right: 1px solid var(--border-subtle) !important;
+    }}
 
     /* Primary Buttons */
-    button[kind="primary"], .stButton > button {
-        background-color: #F6A3CA !important;
-        color: #1E1E2F !important;
-        border: 1px solid #EE89B8 !important;
+    button[kind="primary"], .stButton > button {{
+        background-color: var(--btn-primary-bg) !important;
+        color: var(--btn-primary-text) !important;
+        border: 1px solid var(--btn-primary-border) !important;
         font-weight: 700 !important;
         border-radius: 10px !important;
         padding: 10px 22px !important;
-        box-shadow: 0 4px 12px rgba(246, 163, 202, 0.3) !important;
+        box-shadow: 0 4px 12px var(--btn-shadow) !important;
         transition: all 0.15s ease-in-out !important;
-    }
-    button[kind="primary"]:hover, .stButton > button:hover {
-        background-color: #F48DBF !important;
+    }}
+    button[kind="primary"]:hover, .stButton > button:hover {{
+        background-color: var(--btn-primary-hover) !important;
         transform: translateY(-1px) !important;
-        box-shadow: 0 6px 16px rgba(246, 163, 202, 0.45) !important;
-    }
+    }}
 
     /* Secondary Buttons */
-    button[kind="secondary"] {
-        background-color: #FFFFFF !important;
-        color: #1E1E2F !important;
-        border: 1px solid #E5E6ED !important;
+    button[kind="secondary"] {{
+        background-color: var(--surface-card) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-subtle) !important;
         font-weight: 600 !important;
         border-radius: 10px !important;
-    }
+    }}
 
     /* Tabs Styling */
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: #F1F2FA !important;
+    .stTabs [data-baseweb="tab-list"] {{
+        background-color: var(--surface-shell) !important;
         border-radius: 12px !important;
         padding: 6px !important;
         gap: 8px !important;
-    }
-    .stTabs [data-baseweb="tab"] {
+    }}
+    .stTabs [data-baseweb="tab"] {{
         border-radius: 8px !important;
-        color: #6E7282 !important;
+        color: var(--text-muted) !important;
         font-weight: 600 !important;
         border: none !important;
         padding: 8px 16px !important;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FFFFFF !important;
-        color: #1E1E2F !important;
+    }}
+    .stTabs [aria-selected="true"] {{
+        background-color: var(--surface-card) !important;
+        color: var(--text-primary) !important;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
-    }
+    }}
 
     /* Developer Footer */
-    .developer-footer {
-        background: #F1F2FA;
-        border-top: 1px solid #E5E6ED;
+    .developer-footer {{
+        background: var(--footer-bg);
+        border-top: 1px solid var(--footer-border);
         border-radius: 12px;
         padding: 26px 24px 18px 24px;
         margin-top: 45px;
-        color: #6E7282;
+        color: var(--text-muted);
         font-size: 0.82rem;
-    }
-    .footer-col-title {
-        color: #1E1E2F;
+    }}
+    .footer-col-title {{
+        color: var(--text-primary);
         font-weight: 700;
         margin-bottom: 8px;
         text-transform: uppercase;
         font-size: 0.74rem;
         letter-spacing: 0.06em;
-    }
-    .footer-link {
-        color: #1E1E2F !important;
+    }}
+    .footer-link {{
+        color: var(--text-primary) !important;
         text-decoration: underline !important;
         font-weight: 500;
-    }
-    .footer-link:hover {
-        color: #F6A3CA !important;
-    }
+    }}
+    .footer-link:hover {{
+        color: var(--tag-color) !important;
+    }}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 
-def apply_plotly_fig_theme(fig: go.Figure, height: int = 310) -> go.Figure:
-    """Style Plotly charts to seamlessly integrate with Figma V2 warm pastel canvas."""
-    fig.update_layout(
-        template="plotly_white",
-        paper_bgcolor="#FFFFFF",
-        plot_bgcolor="#FFFFFF",
-        font=dict(color="#1E1E2F", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=11),
-        margin=dict(l=20, r=20, t=36, b=20),
-        height=height,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1,
-            font=dict(size=10, color="#1E1E2F"),
-        ),
-    )
-    fig.update_xaxes(
-        gridcolor="#F1F2FA",
-        linecolor="#E5E6ED",
-        tickfont=dict(color="#6E7282"),
-    )
-    fig.update_yaxes(
-        gridcolor="#F1F2FA",
-        linecolor="#E5E6ED",
-        tickfont=dict(color="#6E7282"),
-    )
+def apply_plotly_fig_theme(fig: go.Figure, height: int = 310, is_dark_mode: bool = False) -> go.Figure:
+    """Style Plotly charts to seamlessly integrate with the active theme."""
+    if is_dark_mode:
+        fig.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="#111827",
+            plot_bgcolor="#111827",
+            font=dict(color="#94A3B8", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=11),
+            margin=dict(l=20, r=20, t=36, b=20),
+            height=height,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+                font=dict(size=10, color="#94A3B8"),
+            ),
+        )
+        fig.update_xaxes(
+            gridcolor="rgba(255, 255, 255, 0.06)",
+            linecolor="rgba(255, 255, 255, 0.1)",
+            tickfont=dict(color="#94A3B8"),
+        )
+        fig.update_yaxes(
+            gridcolor="rgba(255, 255, 255, 0.06)",
+            linecolor="rgba(255, 255, 255, 0.1)",
+            tickfont=dict(color="#94A3B8"),
+        )
+    else:
+        fig.update_layout(
+            template="plotly_white",
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            font=dict(color="#1E1E2F", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=11),
+            margin=dict(l=20, r=20, t=36, b=20),
+            height=height,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+                font=dict(size=10, color="#1E1E2F"),
+            ),
+        )
+        fig.update_xaxes(
+            gridcolor="#F1F2FA",
+            linecolor="#E5E6ED",
+            tickfont=dict(color="#6E7282"),
+        )
+        fig.update_yaxes(
+            gridcolor="#F1F2FA",
+            linecolor="#E5E6ED",
+            tickfont=dict(color="#6E7282"),
+        )
     return fig
 
 
 sys_info = SystemInfo.capture()
 
 # ==============================================================================
-# SIDEBAR NAVIGATION & HOST ENVIRONMENT
+# SIDEBAR NAVIGATION & THEME TOGGLE
 # ==============================================================================
+brand_badge_color = "#06B6D4" if is_dark else "#F6A3CA"
 st.sidebar.markdown(
-    """
+    f"""
     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-        <span style="font-size: 1.4rem; background: #F6A3CA; padding: 4px 8px; border-radius: 8px;">⚡</span>
-        <span style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F; letter-spacing: -0.02em;">TinyBench</span>
-        <span style="font-size: 0.65rem; background: #C0EFDC; color: #0F4B37; border: 1px solid #A3DEC4; padding: 2px 6px; border-radius: 6px; font-weight: 700;">v0.2.0</span>
+        <span style="font-size: 1.4rem; background: {brand_badge_color}; padding: 4px 8px; border-radius: 8px; color: #070A0F;">⚡</span>
+        <span style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em;">TinyBench</span>
+        <span style="font-size: 0.65rem; background: var(--badge-bg); color: var(--badge-text); border: 1px solid var(--badge-border); padding: 2px 6px; border-radius: 6px; font-weight: 700;">v0.2.0</span>
     </div>
-    <div style="font-size: 0.78rem; color: #6E7282; margin-bottom: 18px;">
+    <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
         Open-Weight LLM Benchmarking Studio
     </div>
     """,
     unsafe_allow_html=True,
 )
+
+# Dark Mode Toggle
+theme_toggle = st.sidebar.toggle(
+    "🌙 Dark Mode" if is_dark else "☀️ Light Mode",
+    value=is_dark,
+    key="dark_mode",
+    help="Toggle between Figma V2 Warm Pastel (Light) and Dark Slate (Dark) themes.",
+)
+
 st.sidebar.divider()
 
 nav_choice = st.sidebar.radio(
@@ -377,25 +515,25 @@ st.sidebar.divider()
 # Sidebar Host Specs Card
 st.sidebar.markdown(
     f"""
-    <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 10px; padding: 14px; font-size: 0.78rem; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
-        <div style="color: #6E7282; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">
+    <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 14px; font-size: 0.78rem; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+        <div style="color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">
             💻 Host Environment
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color: #6E7282;">Platform:</span>
-            <span style="color: #1E1E2F; font-weight: 600;">{sys_info.os_name}</span>
+            <span style="color: var(--text-muted);">Platform:</span>
+            <span style="color: var(--text-primary); font-weight: 600;">{sys_info.os_name}</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color: #6E7282;">Threads:</span>
-            <span style="color: #1E1E2F; font-weight: 600;">{sys_info.cpu_physical_cores} Cores ({sys_info.cpu_logical_cores} Threads)</span>
+            <span style="color: var(--text-muted);">Threads:</span>
+            <span style="color: var(--text-primary); font-weight: 600;">{sys_info.cpu_physical_cores} Cores ({sys_info.cpu_logical_cores} Threads)</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color: #6E7282;">Avail RAM:</span>
-            <span style="color: #0F4B37; font-weight: 700;">{sys_info.available_ram_mb:.0f} MB</span>
+            <span style="color: var(--text-muted);">Avail RAM:</span>
+            <span style="color: var(--kpi-mint-text); font-weight: 700;">{sys_info.available_ram_mb:.0f} MB</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-            <span style="color: #6E7282;">Device:</span>
-            <span style="color: #1E1E2F; font-weight: 600;">CPU Mode</span>
+            <span style="color: var(--text-muted);">Device:</span>
+            <span style="color: var(--text-primary); font-weight: 600;">CPU Mode</span>
         </div>
     </div>
     """,
@@ -406,7 +544,7 @@ st.sidebar.markdown(
     """
     <div style="margin-top: 16px; text-align: center;">
         <a href="https://github.com/shettyadithyar76-prog/tinybench" target="_blank" style="text-decoration: none;">
-            <span style="font-size: 0.76rem; color: #1E1E2F; background: #FFFFFF; border: 1px solid #E5E6ED; padding: 6px 12px; border-radius: 8px; display: inline-block; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <span style="font-size: 0.76rem; color: var(--text-primary); background: var(--surface-card); border: 1px solid var(--border-subtle); padding: 6px 12px; border-radius: 8px; display: inline-block; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                 ⭐️ GitHub Repository
             </span>
         </a>
@@ -417,10 +555,9 @@ st.sidebar.markdown(
 
 
 # ==============================================================================
-# SCREEN 1: OVERVIEW DASHBOARD (Figma Frame 1)
+# SCREEN 1: OVERVIEW DASHBOARD
 # ==============================================================================
 if nav_choice == "Overview":
-    # Top Breadcrumb
     st.markdown(
         """
         <div class="portal-bar">
@@ -451,7 +588,7 @@ if nav_choice == "Overview":
         unsafe_allow_html=True,
     )
 
-    # 4-Card Bento Grid (Mint, Lilac, Butter, Rose)
+    # 4-Card Bento Grid
     latest = all_runs[0] if all_runs else None
     k1, k2, k3, k4 = st.columns(4)
 
@@ -460,9 +597,9 @@ if nav_choice == "Overview":
         st.markdown(
             f"""
             <div class="kpi-card kpi-card-mint">
-                <div class="kpi-title" style="color: #0F4B37;">Throughput Score</div>
-                <div class="kpi-value" style="color: #0F4B37;">{acc_str}</div>
-                <div class="kpi-sub" style="color: #15664C;">↑ +4.1% vs baseline</div>
+                <div class="kpi-title" style="color: var(--kpi-mint-text);">Throughput Score</div>
+                <div class="kpi-value" style="color: var(--kpi-mint-text);">{acc_str}</div>
+                <div class="kpi-sub" style="color: var(--kpi-mint-sub);">↑ +4.1% vs baseline</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -473,9 +610,9 @@ if nav_choice == "Overview":
         st.markdown(
             f"""
             <div class="kpi-card kpi-card-lilac">
-                <div class="kpi-title" style="color: #3C236E;">Mean Latency</div>
-                <div class="kpi-value" style="color: #3C236E;">{lat_str}</div>
-                <div class="kpi-sub" style="color: #55349B;">p95: 58 ms (TTFT)</div>
+                <div class="kpi-title" style="color: var(--kpi-lilac-text);">Mean Latency</div>
+                <div class="kpi-value" style="color: var(--kpi-lilac-text);">{lat_str}</div>
+                <div class="kpi-sub" style="color: var(--kpi-lilac-sub);">p95: 58 ms (TTFT)</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -486,9 +623,9 @@ if nav_choice == "Overview":
         st.markdown(
             f"""
             <div class="kpi-card kpi-card-butter">
-                <div class="kpi-title" style="color: #5F410A;">Peak Memory</div>
-                <div class="kpi-value" style="color: #5F410A;">{mem_str}</div>
-                <div class="kpi-sub" style="color: #7D560E;">Within 8GB RAM budget</div>
+                <div class="kpi-title" style="color: var(--kpi-butter-text);">Peak Memory</div>
+                <div class="kpi-value" style="color: var(--kpi-butter-text);">{mem_str}</div>
+                <div class="kpi-sub" style="color: var(--kpi-butter-sub);">Within 8GB RAM budget</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -499,9 +636,9 @@ if nav_choice == "Overview":
         st.markdown(
             f"""
             <div class="kpi-card kpi-card-rose">
-                <div class="kpi-title" style="color: #781E41;">Error Rate</div>
-                <div class="kpi-value" style="color: #781E41;">{comp_str}</div>
-                <div class="kpi-sub" style="color: #9E2B58;">Zero fatal crashes</div>
+                <div class="kpi-title" style="color: var(--kpi-rose-text);">Error Rate</div>
+                <div class="kpi-value" style="color: var(--kpi-rose-text);">{comp_str}</div>
+                <div class="kpi-sub" style="color: var(--kpi-rose-sub);">Zero fatal crashes</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -518,7 +655,7 @@ if nav_choice == "Overview":
             <div class="surface-card">
                 <div class="surface-card-title">
                     <span>📈 Throughput & Latency Trend</span>
-                    <span style="font-size: 0.75rem; color: #6E7282; font-weight: 500;">TOKENS/SEC VELOCITY</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">TOKENS/SEC VELOCITY</span>
                 </div>
             """,
             unsafe_allow_html=True,
@@ -534,29 +671,28 @@ if nav_choice == "Overview":
                         x=x_labels,
                         y=lats,
                         mode="lines+markers",
-                        line=dict(color="#F6A3CA", width=3),
-                        marker=dict(size=7, color="#1E1E2F"),
+                        line=dict(color=chart_line_color, width=3),
+                        marker=dict(size=7, color=chart_marker_color),
                         name="Latency (ms)",
                     )
                 )
-                apply_plotly_fig_theme(fig_timeline, height=270)
+                apply_plotly_fig_theme(fig_timeline, height=270, is_dark_mode=is_dark)
                 st.plotly_chart(fig_timeline, use_container_width=True)
             else:
                 st.caption("No task points available for this run.")
         else:
-            # Fallback aesthetic curve
             fig_demo = go.Figure()
             fig_demo.add_trace(
                 go.Scatter(
                     x=["#1", "#2", "#3", "#4", "#5", "#6"],
                     y=[48, 42, 39, 36, 35, 38],
                     mode="lines+markers",
-                    line=dict(color="#F6A3CA", width=3),
-                    marker=dict(size=7, color="#1E1E2F"),
+                    line=dict(color=chart_line_color, width=3),
+                    marker=dict(size=7, color=chart_marker_color),
                     name="Median Latency (ms)",
                 )
             )
-            apply_plotly_fig_theme(fig_demo, height=270)
+            apply_plotly_fig_theme(fig_demo, height=270, is_dark_mode=is_dark)
             st.plotly_chart(fig_demo, use_container_width=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
@@ -565,10 +701,10 @@ if nav_choice == "Overview":
         st.markdown(
             """
             <div class="quick-run-card">
-                <div style="font-size: 1.15rem; font-weight: 800; color: #5F410A; margin-bottom: 4px;">
+                <div style="font-size: 1.15rem; font-weight: 800; margin-bottom: 4px;">
                     ⚡ Quick Run Studio
                 </div>
-                <div style="font-size: 0.82rem; color: #7D560E; margin-bottom: 16px;">
+                <div style="font-size: 0.82rem; margin-bottom: 16px; opacity: 0.9;">
                     Launch a single-click benchmark directly in your active browser session.
                 </div>
             """,
@@ -577,10 +713,10 @@ if nav_choice == "Overview":
         if latest:
             st.markdown(
                 f"""
-                <div style="background: #FFFFFF; border: 1px solid #EBD385; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 0.82rem;">
-                    <div style="font-weight: 700; color: #1E1E2F; margin-bottom: 4px;">Latest Run: {latest['model_name']}</div>
-                    <div style="color: #6E7282; font-size: 0.74rem; font-family: monospace;">ID: {latest['run_id']}</div>
-                    <div style="margin-top: 6px; display: flex; justify-content: space-between; color: #1E1E2F;">
+                <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 0.82rem; color: var(--text-primary);">
+                    <div style="font-weight: 700; margin-bottom: 4px;">Latest Run: {latest['model_name']}</div>
+                    <div style="color: var(--text-muted); font-size: 0.74rem; font-family: monospace;">ID: {latest['run_id']}</div>
+                    <div style="margin-top: 6px; display: flex; justify-content: space-between;">
                         <span>Accuracy: <strong>{latest['accuracy']:.1f}%</strong></span>
                         <span>RAM: <strong>{latest['peak_memory_mb']:.1f} MB</strong></span>
                     </div>
@@ -589,7 +725,6 @@ if nav_choice == "Overview":
                 unsafe_allow_html=True,
             )
 
-        # Quick action trigger
         if st.button("▶ Run Quick 5-Example Benchmark", type="primary", use_container_width=True):
             cfg = BenchmarkConfig(
                 dataset_path="datasets/basic_v1.jsonl",
@@ -620,7 +755,7 @@ if nav_choice == "Overview":
 
 
 # ==============================================================================
-# SCREEN 2: RUN BENCHMARK CONFIGURATION (Figma Frame 2)
+# SCREEN 2: RUN BENCHMARK CONFIGURATION
 # ==============================================================================
 elif nav_choice == "Run Benchmark":
     st.markdown(
@@ -709,17 +844,17 @@ elif nav_choice == "Run Benchmark":
             f"""
             <div class="surface-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-weight: 700; color: #1E1E2F; font-size: 1.05rem;">{meta.model_name}</span>
+                    <span style="font-weight: 700; color: var(--text-primary); font-size: 1.05rem;">{meta.model_name}</span>
                     {badge_type}
                 </div>
-                <div style="font-size: 0.82rem; color: #6E7282; margin-bottom: 12px; line-height: 1.4;">
+                <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
                     {meta.description}
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.78rem; font-family: monospace; background: #F1F2FA; padding: 12px; border-radius: 8px; border: 1px solid #E5E6ED;">
-                    <div><span style="color: #6E7282;">Parameters:</span> <span style="color: #1E1E2F; font-weight: 600;">{meta.parameters}</span></div>
-                    <div><span style="color: #6E7282;">License:</span> <span style="color: #1E1E2F; font-weight: 600;">{meta.license}</span></div>
-                    <div><span style="color: #6E7282;">Est. RAM:</span> <span style="color: #0F4B37; font-weight: 700;">{meta.estimated_ram_mb:.0f} MB</span></div>
-                    <div><span style="color: #6E7282;">Backend:</span> <span style="color: #1E1E2F; font-weight: 600;">{meta.backend_type}</span></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.78rem; font-family: monospace; background: var(--surface-nested); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                    <div><span style="color: var(--text-muted);">Parameters:</span> <span style="color: var(--text-primary); font-weight: 600;">{meta.parameters}</span></div>
+                    <div><span style="color: var(--text-muted);">License:</span> <span style="color: var(--text-primary); font-weight: 600;">{meta.license}</span></div>
+                    <div><span style="color: var(--text-muted);">Est. RAM:</span> <span style="color: var(--kpi-mint-text); font-weight: 700;">{meta.estimated_ram_mb:.0f} MB</span></div>
+                    <div><span style="color: var(--text-muted);">Backend:</span> <span style="color: var(--text-primary); font-weight: 600;">{meta.backend_type}</span></div>
                 </div>
             </div>
             """,
@@ -735,10 +870,9 @@ elif nav_choice == "Run Benchmark":
                 f"✅ **Hardware Compatible**: Current RAM ({sys_info.available_ram_mb:.0f} MB) is safe for {meta.model_name}."
             )
 
-        # Hardware Advisory Banner
         st.markdown(
             """
-            <div style="background: #F9E7A8; border: 1px solid #EBD385; border-radius: 10px; padding: 14px; font-size: 0.82rem; color: #5F410A; margin-top: 14px;">
+            <div style="background: var(--kpi-butter-bg); border: 1px solid var(--kpi-butter-border); border-radius: 10px; padding: 14px; font-size: 0.82rem; color: var(--kpi-butter-text); margin-top: 14px;">
                 <strong>⚠️ Hardware Advisory:</strong> CPU execution utilizes system threads for sequential inference. Keep this tab active while the evaluation runs.
             </div>
             """,
@@ -802,7 +936,7 @@ elif nav_choice == "Run Benchmark":
 
 
 # ==============================================================================
-# SCREEN 3: RUN DETAILS & EXECUTION LOG (Figma Frame 3)
+# SCREEN 3: RUN DETAILS & EXECUTION LOG
 # ==============================================================================
 elif nav_choice == "Run Details":
     st.markdown(
@@ -850,9 +984,9 @@ elif nav_choice == "Run Details":
                 st.markdown(
                     f"""
                     <div class="kpi-card kpi-card-mint">
-                        <div class="kpi-title" style="color: #0F4B37;">Final Accuracy</div>
-                        <div class="kpi-value" style="color: #0F4B37;">{run_res.accuracy:.1f}%</div>
-                        <div class="kpi-sub" style="color: #15664C;">Target answer match</div>
+                        <div class="kpi-title" style="color: var(--kpi-mint-text);">Final Accuracy</div>
+                        <div class="kpi-value" style="color: var(--kpi-mint-text);">{run_res.accuracy:.1f}%</div>
+                        <div class="kpi-sub" style="color: var(--kpi-mint-sub);">Target answer match</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -861,9 +995,9 @@ elif nav_choice == "Run Details":
                 st.markdown(
                     f"""
                     <div class="kpi-card kpi-card-lilac">
-                        <div class="kpi-title" style="color: #3C236E;">Mean Latency</div>
-                        <div class="kpi-value" style="color: #3C236E;">{run_res.latency_summary.median_latency_seconds * 1000:.0f} ms</div>
-                        <div class="kpi-sub" style="color: #55349B;">CPU wall-clock</div>
+                        <div class="kpi-title" style="color: var(--kpi-lilac-text);">Mean Latency</div>
+                        <div class="kpi-value" style="color: var(--kpi-lilac-text);">{run_res.latency_summary.median_latency_seconds * 1000:.0f} ms</div>
+                        <div class="kpi-sub" style="color: var(--kpi-lilac-sub);">CPU wall-clock</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -872,9 +1006,9 @@ elif nav_choice == "Run Details":
                 st.markdown(
                     f"""
                     <div class="kpi-card kpi-card-butter">
-                        <div class="kpi-title" style="color: #5F410A;">Peak RAM</div>
-                        <div class="kpi-value" style="color: #5F410A;">{run_res.peak_memory_mb:.1f} MB</div>
-                        <div class="kpi-sub" style="color: #7D560E;">Resident memory size</div>
+                        <div class="kpi-title" style="color: var(--kpi-butter-text);">Peak RAM</div>
+                        <div class="kpi-value" style="color: var(--kpi-butter-text);">{run_res.peak_memory_mb:.1f} MB</div>
+                        <div class="kpi-sub" style="color: var(--kpi-butter-sub);">Resident memory size</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -883,9 +1017,9 @@ elif nav_choice == "Run Details":
                 st.markdown(
                     f"""
                     <div class="kpi-card kpi-card-rose">
-                        <div class="kpi-title" style="color: #781E41;">Success Rate</div>
-                        <div class="kpi-value" style="color: #781E41;">{run_res.exact_match_rate:.1f}%</div>
-                        <div class="kpi-sub" style="color: #9E2B58;">Valid outputs generated</div>
+                        <div class="kpi-title" style="color: var(--kpi-rose-text);">Success Rate</div>
+                        <div class="kpi-value" style="color: var(--kpi-rose-text);">{run_res.exact_match_rate:.1f}%</div>
+                        <div class="kpi-sub" style="color: var(--kpi-rose-sub);">Valid outputs generated</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -918,9 +1052,9 @@ elif nav_choice == "Run Details":
                         x="Category",
                         y=["Accuracy (%)", "Exact Match (%)", "Compliance (%)"],
                         barmode="group",
-                        color_discrete_sequence=["#F6A3CA", "#C0EFDC", "#DED0F9"],
+                        color_discrete_sequence=chart_bar_palette,
                     )
-                    apply_plotly_fig_theme(fig_cat, height=270)
+                    apply_plotly_fig_theme(fig_cat, height=270, is_dark_mode=is_dark)
                     st.plotly_chart(fig_cat, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -937,16 +1071,16 @@ elif nav_choice == "Run Details":
                     fig_lat = px.histogram(
                         lat_values,
                         nbins=12,
-                        color_discrete_sequence=["#DED0F9"],
+                        color_discrete_sequence=["#DED0F9" if not is_dark else "#8B5CF6"],
                     )
                     fig_lat.add_vline(
                         x=run_res.latency_summary.median_latency_seconds * 1000,
                         line_dash="dash",
-                        line_color="#F6A3CA",
+                        line_color=chart_line_color,
                         annotation_text=f"Median ({run_res.latency_summary.median_latency_seconds * 1000:.0f}ms)",
-                        annotation_font_color="#1E1E2F",
+                        annotation_font_color=chart_line_color,
                     )
-                    apply_plotly_fig_theme(fig_lat, height=270)
+                    apply_plotly_fig_theme(fig_lat, height=270, is_dark_mode=is_dark)
                     st.plotly_chart(fig_lat, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1069,15 +1203,15 @@ elif nav_choice == "Model Comparison":
             "Please execute benchmarks for different models or modes in **Run Benchmark**."
         )
     else:
-        # Top 3 Comparison Stat Cards (Mint, Lilac, Butter)
+        # Top 3 Comparison Stat Cards
         sc1, sc2, sc3 = st.columns(3)
         with sc1:
             st.markdown(
                 """
                 <div class="kpi-card kpi-card-mint">
-                    <div class="kpi-title" style="color: #0F4B37;">Comparison Shelf</div>
-                    <div style="font-size: 1.15rem; font-weight: 800; color: #0F4B37; margin-bottom: 2px;">Two Model Records</div>
-                    <div style="font-size: 0.78rem; color: #15664C;">Active pairs ready for delta checks</div>
+                    <div class="kpi-title" style="color: var(--kpi-mint-text);">Comparison Shelf</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: var(--kpi-mint-text); margin-bottom: 2px;">Two Model Records</div>
+                    <div style="font-size: 0.78rem; color: var(--kpi-mint-sub);">Active pairs ready for delta checks</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -1086,9 +1220,9 @@ elif nav_choice == "Model Comparison":
             st.markdown(
                 """
                 <div class="kpi-card kpi-card-lilac">
-                    <div class="kpi-title" style="color: #3C236E;">Evaluation Context</div>
-                    <div style="font-size: 1.15rem; font-weight: 800; color: #3C236E; margin-bottom: 2px;">MMLU Evaluation</div>
-                    <div style="font-size: 0.78rem; color: #55349B;">Context attached to every reported metric</div>
+                    <div class="kpi-title" style="color: var(--kpi-lilac-text);">Evaluation Context</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: var(--kpi-lilac-text); margin-bottom: 2px;">MMLU Evaluation</div>
+                    <div style="font-size: 0.78rem; color: var(--kpi-lilac-sub);">Context attached to every reported metric</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -1097,9 +1231,9 @@ elif nav_choice == "Model Comparison":
             st.markdown(
                 """
                 <div class="kpi-card kpi-card-butter">
-                    <div class="kpi-title" style="color: #5F410A;">Action State</div>
-                    <div style="font-size: 1.15rem; font-weight: 800; color: #5F410A; margin-bottom: 2px;">Ready to Compare</div>
-                    <div style="font-size: 0.78rem; color: #7D560E;">Select ready model pairs to proceed</div>
+                    <div class="kpi-title" style="color: var(--kpi-butter-text);">Action State</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: var(--kpi-butter-text); margin-bottom: 2px;">Ready to Compare</div>
+                    <div style="font-size: 0.78rem; color: var(--kpi-butter-sub);">Select ready model pairs to proceed</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -1120,22 +1254,20 @@ elif nav_choice == "Model Comparison":
             selected_ids = [run_options[l] for l in selected_runs_labels]
             selected_run_objects = [db.get_run(rid) for rid in selected_ids if db.get_run(rid)]
 
-            # Comparison Shelf Container
             st.markdown(
                 """
                 <div class="surface-card">
                     <div class="surface-card-title">
                         <span>Comparison Shelf</span>
-                        <span style="font-size: 0.75rem; color: #6E7282; font-weight: 500;">REPORTED VALUES</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">REPORTED VALUES</span>
                     </div>
-                    <div style="font-size: 0.85rem; color: #6E7282; margin-bottom: 16px;">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
                         Reported values exist only where the source and process decide.
                     </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-            # Model A & Model B Side-by-Side Shelf Cards
             col_a, col_b = st.columns(2)
             run_a = selected_run_objects[0]
             run_b = selected_run_objects[1]
@@ -1143,26 +1275,26 @@ elif nav_choice == "Model Comparison":
             with col_a:
                 st.markdown(
                     f"""
-                    <div style="background: #F1F2FA; border: 2px solid #F6A3CA; border-radius: 12px; padding: 18px; margin-bottom: 14px;">
+                    <div style="background: var(--surface-nested); border: 2px solid var(--tag-color); border-radius: 12px; padding: 18px; margin-bottom: 14px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <span class="badge-pill badge-rose">FEATURED MODEL A</span>
-                            <span style="font-size: 0.75rem; color: #6E7282; font-family: monospace;">{run_a.run_id}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">{run_a.run_id}</span>
                         </div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: #1E1E2F; margin-bottom: 14px;">
+                        <div style="font-size: 1.1rem; font-weight: 800; color: var(--text-primary); margin-bottom: 14px;">
                             {run_a.model_metadata.model_name}
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
-                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">Accuracy</div>
-                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_a.accuracy:.1f}%</div>
+                            <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Accuracy</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{run_a.accuracy:.1f}%</div>
                             </div>
-                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
-                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">Latency</div>
-                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_a.latency_summary.median_latency_seconds * 1000:.0f} ms</div>
+                            <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Latency</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{run_a.latency_summary.median_latency_seconds * 1000:.0f} ms</div>
                             </div>
-                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
-                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">RAM</div>
-                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_a.peak_memory_mb:.1f} MB</div>
+                            <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">RAM</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{run_a.peak_memory_mb:.1f} MB</div>
                             </div>
                         </div>
                     </div>
@@ -1173,26 +1305,26 @@ elif nav_choice == "Model Comparison":
             with col_b:
                 st.markdown(
                     f"""
-                    <div style="background: #F1F2FA; border: 1px solid #E5E6ED; border-radius: 12px; padding: 18px; margin-bottom: 14px;">
+                    <div style="background: var(--surface-nested); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 18px; margin-bottom: 14px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <span class="badge-pill badge-mint">MODEL B</span>
-                            <span style="font-size: 0.75rem; color: #6E7282; font-family: monospace;">{run_b.run_id}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">{run_b.run_id}</span>
                         </div>
-                        <div style="font-size: 1.1rem; font-weight: 800; color: #1E1E2F; margin-bottom: 14px;">
+                        <div style="font-size: 1.1rem; font-weight: 800; color: var(--text-primary); margin-bottom: 14px;">
                             {run_b.model_metadata.model_name}
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
-                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">Accuracy</div>
-                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_b.accuracy:.1f}%</div>
+                            <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Accuracy</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{run_b.accuracy:.1f}%</div>
                             </div>
-                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
-                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">Latency</div>
-                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_b.latency_summary.median_latency_seconds * 1000:.0f} ms</div>
+                            <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Latency</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{run_b.latency_summary.median_latency_seconds * 1000:.0f} ms</div>
                             </div>
-                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
-                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">RAM</div>
-                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_b.peak_memory_mb:.1f} MB</div>
+                            <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">RAM</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">{run_b.peak_memory_mb:.1f} MB</div>
                             </div>
                         </div>
                     </div>
@@ -1205,10 +1337,10 @@ elif nav_choice == "Model Comparison":
             # Reading the Shelf Guidance Box
             st.markdown(
                 """
-                <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <div style="font-weight: 700; color: #1E1E2F; margin-bottom: 4px;">📖 Reading the Shelf</div>
-                        <div style="font-size: 0.85rem; color: #6E7282;">
+                        <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">📖 Reading the Shelf</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">
                             Compare models only alongside the task and run configuration that produced the outputs. Metric values mean little without knowing what task was executed.
                         </div>
                     </div>
@@ -1230,10 +1362,9 @@ elif nav_choice == "Model Comparison":
                 )
                 all_cats = ["multiple_choice", "factual_qa", "arithmetic_reasoning", "instruction_following", "structured_output"]
                 fig_radar = go.Figure()
-                palette = ["#F6A3CA", "#C0EFDC", "#DED0F9", "#F9E7A8"]
 
                 for i, r_obj in enumerate(selected_run_objects[:2]):
-                    color = palette[i % len(palette)]
+                    color = chart_radar_palette[i % len(chart_radar_palette)]
                     cat_scores = []
                     for cat in all_cats:
                         if cat in r_obj.category_metrics:
@@ -1251,14 +1382,15 @@ elif nav_choice == "Model Comparison":
                         )
                     )
 
+                polar_bg = "#111827" if is_dark else "#FFFFFF"
                 fig_radar.update_layout(
                     polar=dict(
-                        radialaxis=dict(visible=True, range=[0, 100], gridcolor="#F1F2FA", linecolor="#E5E6ED"),
-                        angularaxis=dict(gridcolor="#F1F2FA", linecolor="#E5E6ED", color="#1E1E2F"),
-                        bgcolor="#FFFFFF",
+                        radialaxis=dict(visible=True, range=[0, 100], gridcolor="rgba(255,255,255,0.08)" if is_dark else "#F1F2FA", linecolor="rgba(255,255,255,0.1)" if is_dark else "#E5E6ED"),
+                        angularaxis=dict(gridcolor="rgba(255,255,255,0.08)" if is_dark else "#F1F2FA", linecolor="rgba(255,255,255,0.1)" if is_dark else "#E5E6ED", color="#94A3B8" if is_dark else "#1E1E2F"),
+                        bgcolor=polar_bg,
                     ),
-                    paper_bgcolor="#FFFFFF",
-                    font=dict(color="#1E1E2F", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=10),
+                    paper_bgcolor=polar_bg,
+                    font=dict(color="#94A3B8" if is_dark else "#1E1E2F", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=10),
                     margin=dict(l=30, r=30, t=30, b=30),
                     height=290,
                     legend=dict(orientation="h", y=-0.2, font=dict(size=10)),
@@ -1281,15 +1413,15 @@ elif nav_choice == "Model Comparison":
                     x="Model Name",
                     y=["Accuracy (%)", "Exact Match (%)"],
                     barmode="group",
-                    color_discrete_sequence=["#F6A3CA", "#C0EFDC"],
+                    color_discrete_sequence=chart_bar_palette,
                 )
-                apply_plotly_fig_theme(fig_comp_bars, height=290)
+                apply_plotly_fig_theme(fig_comp_bars, height=290, is_dark_mode=is_dark)
                 st.plotly_chart(fig_comp_bars, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==============================================================================
-# SCREEN 5: MODELS & DATASETS REGISTRY (Figma V2 Architecture)
+# SCREEN 5: MODELS & DATASETS REGISTRY
 # ==============================================================================
 elif nav_choice == "05. Models & Datasets" or nav_choice == "Models & Datasets":
     st.markdown(
@@ -1321,14 +1453,14 @@ elif nav_choice == "05. Models & Datasets" or nav_choice == "Models & Datasets":
                     f"""
                     <div class="surface-card">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-size: 1.05rem; font-weight: 800; color: #1E1E2F;">{m.model_name}</span>
+                            <span style="font-size: 1.05rem; font-weight: 800; color: var(--text-primary);">{m.model_name}</span>
                             <div>{badge}</div>
                         </div>
-                        <div style="font-size: 0.84rem; color: #6E7282; margin-bottom: 12px;">{m.description}</div>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.78rem; font-family: monospace; background: #F1F2FA; padding: 12px; border-radius: 8px; border: 1px solid #E5E6ED;">
-                            <div><span style="color: #6E7282;">Provider:</span> <span style="color: #1E1E2F; font-weight: 600;">{m.model_id}</span></div>
-                            <div><span style="color: #6E7282;">Parameters:</span> <span style="color: #1E1E2F; font-weight: 600;">{m.parameters}</span></div>
-                            <div><span style="color: #6E7282;">Status:</span> <span style="color: #0F4B37; font-weight: 700;">Ready for Selection</span></div>
+                        <div style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 12px;">{m.description}</div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.78rem; font-family: monospace; background: var(--surface-nested); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+                            <div><span style="color: var(--text-muted);">Provider:</span> <span style="color: var(--text-primary); font-weight: 600;">{m.model_id}</span></div>
+                            <div><span style="color: var(--text-muted);">Parameters:</span> <span style="color: var(--text-primary); font-weight: 600;">{m.parameters}</span></div>
+                            <div><span style="color: var(--text-muted);">Status:</span> <span style="color: var(--kpi-mint-text); font-weight: 700;">Ready for Selection</span></div>
                         </div>
                     </div>
                     """,
@@ -1342,7 +1474,7 @@ elif nav_choice == "05. Models & Datasets" or nav_choice == "Models & Datasets":
                 val_report = validate_dataset_file(dataset_path)
                 st.markdown(
                     f"""
-                    <div style="background: #C0EFDC; border: 1px solid #A3DEC4; border-radius: 10px; padding: 14px; color: #0F4B37; font-size: 0.88rem; font-weight: 600; margin-bottom: 16px;">
+                    <div style="background: var(--kpi-mint-bg); border: 1px solid var(--kpi-mint-border); border-radius: 10px; padding: 14px; color: var(--kpi-mint-text); font-size: 0.88rem; font-weight: 600; margin-bottom: 16px;">
                         ✅ Validated Dataset: {val_report.total_items} benchmark items across {len(val_report.category_counts)} distinct evaluation categories.
                     </div>
                     """,
@@ -1364,34 +1496,33 @@ elif nav_choice == "05. Models & Datasets" or nav_choice == "Models & Datasets":
                 st.error(f"Dataset file not found at `{dataset_path}`.")
 
     with col_guide:
-        # Large Butter Yellow Card (from Figma V2 Frame 5)
         st.markdown(
             """
-            <div style="background: #F9E7A8; border: 1px solid #EBD385; border-radius: 14px; padding: 24px; color: #5F410A;">
+            <div style="background: var(--kpi-butter-bg); border: 1px solid var(--kpi-butter-border); border-radius: 14px; padding: 24px; color: var(--kpi-butter-text);">
                 <div style="font-size: 1.2rem; font-weight: 800; margin-bottom: 8px;">
                     Build a Clean Comparison
                 </div>
-                <div style="font-size: 0.86rem; color: #7D560E; margin-bottom: 20px; line-height: 1.5;">
+                <div style="font-size: 0.86rem; margin-bottom: 20px; line-height: 1.5; opacity: 0.9;">
                     Selection context, metadata, and evaluation details make the trade-offs clear even with varying run sizes.
                 </div>
                 
                 <div style="margin-bottom: 16px;">
                     <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">1. Choose compatible evaluation context</div>
-                    <div style="font-size: 0.8rem; color: #7D560E;">
+                    <div style="font-size: 0.8rem; opacity: 0.9;">
                         Ensure both models are tested under identical prompt templates, few-shot conditioning, and answer parsers.
                     </div>
                 </div>
                 
                 <div style="margin-bottom: 16px;">
                     <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">2. Confirm dataset coverage</div>
-                    <div style="font-size: 0.8rem; color: #7D560E;">
+                    <div style="font-size: 0.8rem; opacity: 0.9;">
                         Verify that sample limits, subject domains, and question difficulties match across both runs.
                     </div>
                 </div>
                 
                 <div>
                     <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">3. Open the comparison shelf</div>
-                    <div style="font-size: 0.8rem; color: #7D560E;">
+                    <div style="font-size: 0.8rem; opacity: 0.9;">
                         Review throughput velocity, latency distributions, and peak memory side by side.
                     </div>
                 </div>
@@ -1402,7 +1533,7 @@ elif nav_choice == "05. Models & Datasets" or nav_choice == "Models & Datasets":
 
 
 # ==============================================================================
-# SCREEN 6: METHODOLOGY & SCIENTIFIC STANDARDS (Figma V2 Frame 6)
+# SCREEN 6: METHODOLOGY & SCIENTIFIC STANDARDS
 # ==============================================================================
 elif nav_choice == "06. Methodology & Hardware" or nav_choice == "Methodology":
     st.markdown(
@@ -1421,7 +1552,7 @@ elif nav_choice == "06. Methodology & Hardware" or nav_choice == "Methodology":
     # Top Mint Principle Card
     st.markdown(
         """
-        <div style="background: #C0EFDC; border: 1px solid #A3DEC4; border-radius: 12px; padding: 18px 22px; color: #0F4B37; margin-bottom: 24px; display: flex; align-items: center; gap: 14px;">
+        <div style="background: var(--kpi-mint-bg); border: 1px solid var(--kpi-mint-border); border-radius: 12px; padding: 18px 22px; color: var(--kpi-mint-text); margin-bottom: 24px; display: flex; align-items: center; gap: 14px;">
             <span style="font-size: 1.5rem;">📖</span>
             <div>
                 <div style="font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.06em;">Reporting Principle</div>
@@ -1438,23 +1569,23 @@ elif nav_choice == "06. Methodology & Hardware" or nav_choice == "Methodology":
         st.markdown(
             """
             <div class="surface-card">
-                <div style="font-size: 0.74rem; font-weight: 700; color: #6E7282; text-transform: uppercase; margin-bottom: 12px;">
+                <div style="font-size: 0.74rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px;">
                     Section Index
                 </div>
-                <div style="background: #F1F2FA; padding: 8px 12px; border-radius: 6px; font-weight: 700; color: #1E1E2F; margin-bottom: 6px;">
+                <div style="background: var(--surface-nested); padding: 8px 12px; border-radius: 6px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">
                     01. Evaluation Context
                 </div>
-                <div style="padding: 8px 12px; color: #6E7282; font-weight: 500;">
+                <div style="padding: 8px 12px; color: var(--text-muted); font-weight: 500;">
                     02. Reading Reported Results
                 </div>
-                <div style="padding: 8px 12px; color: #6E7282; font-weight: 500;">
+                <div style="padding: 8px 12px; color: var(--text-muted); font-weight: 500;">
                     03. Workloads & Hardware
                 </div>
             </div>
             
-            <div style="background: #F9E7A8; border: 1px solid #EBD385; border-radius: 12px; padding: 18px; color: #5F410A; margin-top: 14px;">
+            <div style="background: var(--kpi-butter-bg); border: 1px solid var(--kpi-butter-border); border-radius: 12px; padding: 18px; color: var(--kpi-butter-text); margin-top: 14px;">
                 <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 6px;">Keep the whole context!</div>
-                <div style="font-size: 0.82rem; line-height: 1.5;">
+                <div style="font-size: 0.82rem; line-height: 1.5; opacity: 0.9;">
                     Values are useful only when the accompanying setup remains visible. Never compare an INT4 quantized model with a full FP16 baseline without noting the precision tradeoff.
                 </div>
             </div>
@@ -1466,20 +1597,20 @@ elif nav_choice == "06. Methodology & Hardware" or nav_choice == "Methodology":
         st.markdown(
             """
             <div class="surface-card">
-                <div style="font-size: 1.05rem; font-weight: 800; color: #1E1E2F; margin-bottom: 6px;">
+                <div style="font-size: 1.05rem; font-weight: 800; color: var(--text-primary); margin-bottom: 6px;">
                     01. Evaluation Context
                 </div>
-                <div style="font-size: 0.85rem; color: #6E7282; line-height: 1.5; margin-bottom: 14px;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
                     TinyBench preserves benchmark records of: the selected model, dataset record, and run configuration. Review this context before interpreting any output.
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem; background: #F1F2FA; padding: 12px; border-radius: 8px;">
+                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem; background: var(--surface-nested); padding: 12px; border-radius: 8px; color: var(--text-primary);">
                     <div><strong>Model record:</strong> Recorded source and configuration registered for the run.</div>
                     <div><strong>Dataset record:</strong> Documented source association with this report.</div>
                     <div><strong>Run details:</strong> The background run configuration alongside the displayed metrics.</div>
                 </div>
             </div>
             
-            <div style="background: #DED0F9; border: 1px solid #C9B5F5; border-radius: 12px; padding: 20px; color: #3C236E; margin-bottom: 20px;">
+            <div style="background: var(--kpi-lilac-bg); border: 1px solid var(--kpi-lilac-border); border-radius: 12px; padding: 20px; color: var(--kpi-lilac-text); margin-bottom: 20px;">
                 <div style="font-size: 1.05rem; font-weight: 800; margin-bottom: 6px;">
                     02. Reading Reported Results
                 </div>
@@ -1493,10 +1624,10 @@ elif nav_choice == "06. Methodology & Hardware" or nav_choice == "Methodology":
             </div>
             
             <div class="surface-card">
-                <div style="font-size: 1.05rem; font-weight: 800; color: #1E1E2F; margin-bottom: 6px;">
+                <div style="font-size: 1.05rem; font-weight: 800; color: var(--text-primary); margin-bottom: 6px;">
                     03. What Accompanies a Result
                 </div>
-                <div style="font-size: 0.85rem; color: #6E7282; line-height: 1.5;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
                     Technical information should remain readable at all metrics, and ensure the output is explainable. Use Run Details to inspect benchmark samples and system log console from a completed run.
                 </div>
             </div>
@@ -1506,21 +1637,22 @@ elif nav_choice == "06. Methodology & Hardware" or nav_choice == "Methodology":
 
 
 # ==============================================================================
-# TECHNICAL DEVELOPER FOOTER (Figma V2 Warm Pastel Matched)
+# TECHNICAL DEVELOPER FOOTER
 # ==============================================================================
+theme_name = "Dark Slate Precision" if is_dark else "Figma V2 Pastel Neumorphic"
 st.markdown(
     f"""
     <div class="developer-footer">
         <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr; gap: 24px; margin-bottom: 22px;">
             <div>
-                <div style="font-weight: 800; color: #1E1E2F; font-size: 1.05rem; margin-bottom: 6px;">
+                <div style="font-weight: 800; color: var(--text-primary); font-size: 1.05rem; margin-bottom: 6px;">
                     ⚡ TinyBench
                 </div>
-                <div style="color: #6E7282; font-size: 0.8rem; line-height: 1.5; margin-bottom: 10px;">
+                <div style="color: var(--text-muted); font-size: 0.8rem; line-height: 1.5; margin-bottom: 10px;">
                     Lightweight open-weight LLM benchmarking toolkit engineered for ordinary CPU-only laptops.
                     Designed for reproducible research, Hacktoberfest, and student experimentation.
                 </div>
-                <div style="font-size: 0.74rem; color: #6E7282;">
+                <div style="font-size: 0.74rem; color: var(--text-muted);">
                     Apache-2.0 License &bull; Free & Open-Source
                 </div>
             </div>
@@ -1543,17 +1675,17 @@ st.markdown(
             </div>
             <div>
                 <div class="footer-col-title">Runtime Specification</div>
-                <div style="font-family: monospace; font-size: 0.76rem; color: #6E7282; display: flex; flex-direction: column; gap: 4px;">
-                    <div>Platform: <span style="color: #1E1E2F; font-weight: 600;">{sys_info.os_name}</span></div>
-                    <div>Cores: <span style="color: #1E1E2F; font-weight: 600;">{sys_info.cpu_physical_cores} Physical / {sys_info.cpu_logical_cores} Threads</span></div>
-                    <div>Python: <span style="color: #1E1E2F; font-weight: 600;">{sys_info.python_version.split()[0]}</span></div>
-                    <div>RAM: <span style="color: #0F4B37; font-weight: 700;">{sys_info.available_ram_mb:.0f} MB</span></div>
+                <div style="font-family: monospace; font-size: 0.76rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px;">
+                    <div>Platform: <span style="color: var(--text-primary); font-weight: 600;">{sys_info.os_name}</span></div>
+                    <div>Cores: <span style="color: var(--text-primary); font-weight: 600;">{sys_info.cpu_physical_cores} Physical / {sys_info.cpu_logical_cores} Threads</span></div>
+                    <div>Python: <span style="color: var(--text-primary); font-weight: 600;">{sys_info.python_version.split()[0]}</span></div>
+                    <div>RAM: <span style="color: var(--kpi-mint-text); font-weight: 700;">{sys_info.available_ram_mb:.0f} MB</span></div>
                 </div>
             </div>
         </div>
-        <div style="border-top: 1px solid #E5E6ED; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; color: #6E7282;">
+        <div style="border-top: 1px solid var(--border-subtle); padding-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; color: var(--text-muted);">
             <div>&copy; 2026 TinyBench Contributors &bull; Open-Weight AI Benchmarking</div>
-            <div style="font-family: monospace; font-weight: 600;">Branch: main &bull; Theme: Figma V2 Pastel Neumorphic</div>
+            <div style="font-family: monospace; font-weight: 600;">Branch: main &bull; Theme: {theme_name}</div>
         </div>
     </div>
     """,
