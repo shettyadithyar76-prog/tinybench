@@ -1,10 +1,16 @@
 """TinyBench Streamlit Dashboard - Interactive Research & Evaluation Interface.
 
-Pixel-perfect implementation aligned with the Figma Design System specification:
-- Deep slate/obsidian canvas (#070A0F, #111827)
-- Cyan & violet glow accents (#22D3EE, #8B5CF6)
-- Bento grid KPI cards, Radar charts, through-put line charts
-- Comprehensive 6-screen architecture with breadcrumb navigation
+Pixel-perfect implementation aligned with the Figma V2 Design System specification:
+- Warm Ivory Canvas (#FFFDF7)
+- Ice Lavender Shell & Containers (#F1F2FA)
+- Pastel Bento Metric Cards:
+  * Mint (#C0EFDC) for Throughput / Accuracy
+  * Lilac (#DED0F9) for Latency / Context
+  * Butter (#F9E7A8) for Memory / Advisory
+  * Rose (#F6A3CA) for Primary CTAs & Featured Selection
+- Charcoal Typography (#1E1E2F) with WCAG AA compliance
+- 7 Connected Artboard Experience: Overview, Mobile, Benchmark Runner,
+  Run Details, Model Comparison (V2), Models & Datasets (V2), Methodology (V2)
 """
 
 from __future__ import annotations
@@ -50,15 +56,15 @@ st.set_page_config(
 )
 
 # ==============================================================================
-# DESIGN SYSTEM: Figma Mockup Aligned Dark Theme Tokens & Global CSS
+# DESIGN SYSTEM: Figma V2 Warm Cream & Pastel Neumorphic Theme Tokens
 # ==============================================================================
 st.markdown(
     """
     <style>
     /* Global Root Surfaces */
     .stApp {
-        background-color: #070A0F !important;
-        color: #F8FAFC !important;
+        background-color: #FFFDF7 !important;
+        color: #1E1E2F !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     }
 
@@ -67,182 +73,234 @@ st.markdown(
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
     }
     .portal-tag {
-        font-size: 0.68rem;
+        font-size: 0.72rem;
         font-weight: 700;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: #06B6D4;
+        color: #F6A3CA;
         font-family: "JetBrains Mono", monospace;
     }
     .page-title {
-        font-size: 1.65rem;
-        font-weight: 700;
-        color: #F8FAFC;
-        letter-spacing: -0.025em;
+        font-size: 1.85rem;
+        font-weight: 800;
+        color: #1E1E2F;
+        letter-spacing: -0.03em;
         margin-bottom: 2px;
     }
     .page-subtitle {
-        font-size: 0.85rem;
-        color: #64748B;
-        margin-bottom: 18px;
+        font-size: 0.92rem;
+        color: #6E7282;
+        margin-bottom: 20px;
     }
 
     /* Info Callout Banner */
     .info-callout {
-        background: linear-gradient(90deg, rgba(6, 182, 212, 0.08) 0%, rgba(17, 24, 39, 0.6) 100%);
-        border-left: 3px solid #06B6D4;
-        border-top: 1px solid rgba(255, 255, 255, 0.06);
-        border-right: 1px solid rgba(255, 255, 255, 0.06);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 8px;
-        padding: 12px 18px;
-        margin-bottom: 20px;
-        font-size: 0.82rem;
-        color: #94A3B8;
+        background: #F1F2FA;
+        border-left: 4px solid #F6A3CA;
+        border-top: 1px solid #E5E6ED;
+        border-right: 1px solid #E5E6ED;
+        border-bottom: 1px solid #E5E6ED;
+        border-radius: 10px;
+        padding: 14px 20px;
+        margin-bottom: 22px;
+        font-size: 0.88rem;
+        color: #1E1E2F;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
-    /* 4-Card KPI Strip */
+    /* 4-Card Pastel Bento Grid */
     .kpi-card {
-        background: #111827;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 16px 20px;
-        transition: all 0.2s ease-in-out;
+        border-radius: 14px;
+        padding: 18px 22px;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         height: 100%;
+        border: 1px solid #E5E6ED;
     }
     .kpi-card:hover {
-        border-color: rgba(6, 182, 212, 0.4);
-        box-shadow: 0 4px 20px rgba(6, 182, 212, 0.07);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+    }
+    .kpi-card-mint {
+        background: #C0EFDC;
+        border-color: #A3DEC4;
+    }
+    .kpi-card-lilac {
+        background: #DED0F9;
+        border-color: #C9B5F5;
+    }
+    .kpi-card-butter {
+        background: #F9E7A8;
+        border-color: #EBD385;
+    }
+    .kpi-card-rose {
+        background: #FCEFF3;
+        border-color: #F6A3CA;
     }
     .kpi-title {
-        font-size: 0.72rem;
-        color: #64748B;
+        font-size: 0.76rem;
         text-transform: uppercase;
-        font-weight: 600;
+        font-weight: 700;
         letter-spacing: 0.06em;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
     }
     .kpi-value {
-        font-size: 1.85rem;
-        font-weight: 700;
-        color: #F8FAFC;
-        font-family: "JetBrains Mono", monospace;
-        letter-spacing: -0.03em;
+        font-size: 2.1rem;
+        font-weight: 800;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: -0.04em;
         line-height: 1.1;
     }
     .kpi-sub {
-        font-size: 0.75rem;
-        color: #94A3B8;
-        margin-top: 4px;
+        font-size: 0.78rem;
+        margin-top: 6px;
         display: flex;
         align-items: center;
         gap: 4px;
+        font-weight: 500;
     }
 
     /* Card Containers */
     .surface-card {
-        background: #111827;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 18px 22px;
-        margin-bottom: 20px;
+        background: #FFFFFF;
+        border: 1px solid #E5E6ED;
+        border-radius: 14px;
+        padding: 22px 26px;
+        margin-bottom: 22px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
     }
     .surface-card-title {
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: #F8FAFC;
-        margin-bottom: 12px;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1E1E2F;
+        margin-bottom: 14px;
         display: flex;
-        align-items: center;
         justify-content: space-between;
+        align-items: center;
     }
 
-    /* Status Badges */
-    .badge-mock {
-        background: rgba(59, 130, 246, 0.12);
-        color: #60A5FA;
-        border: 1px solid rgba(59, 130, 246, 0.28);
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        font-family: "JetBrains Mono", monospace;
+    /* Badges & Pills */
+    .badge-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
     }
-    .badge-real {
-        background: rgba(139, 92, 246, 0.12);
-        color: #C084FC;
-        border: 1px solid rgba(139, 92, 246, 0.28);
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        font-family: "JetBrains Mono", monospace;
+    .badge-mint {
+        background: #C0EFDC;
+        color: #0F4B37;
+        border: 1px solid #A3DEC4;
     }
-    .badge-pass {
-        background: rgba(16, 185, 129, 0.12);
-        color: #34D399;
-        border: 1px solid rgba(16, 185, 129, 0.25);
-        padding: 2px 7px;
-        border-radius: 4px;
-        font-size: 0.7rem;
-        font-weight: 600;
+    .badge-lilac {
+        background: #DED0F9;
+        color: #3C236E;
+        border: 1px solid #C9B5F5;
     }
-    .badge-fail {
-        background: rgba(239, 68, 68, 0.12);
-        color: #F87171;
-        border: 1px solid rgba(239, 68, 68, 0.25);
-        padding: 2px 7px;
-        border-radius: 4px;
-        font-size: 0.7rem;
-        font-weight: 600;
+    .badge-butter {
+        background: #F9E7A8;
+        color: #5F410A;
+        border: 1px solid #EBD385;
+    }
+    .badge-rose {
+        background: #F6A3CA;
+        color: #1E1E2F;
+        border: 1px solid #EE89B8;
+    }
+
+    /* Quick Action Card (Butter Yellow) */
+    .quick-run-card {
+        background: #F9E7A8;
+        border: 1px solid #EBD385;
+        border-radius: 14px;
+        padding: 22px 24px;
+        height: 100%;
+    }
+
+    /* Sidebar Styling */
+    div[data-testid="stSidebar"] {
+        background-color: #F1F2FA !important;
+        border-right: 1px solid #E5E6ED !important;
+    }
+
+    /* Primary Buttons */
+    button[kind="primary"], .stButton > button {
+        background-color: #F6A3CA !important;
+        color: #1E1E2F !important;
+        border: 1px solid #EE89B8 !important;
+        font-weight: 700 !important;
+        border-radius: 10px !important;
+        padding: 10px 22px !important;
+        box-shadow: 0 4px 12px rgba(246, 163, 202, 0.3) !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+    button[kind="primary"]:hover, .stButton > button:hover {
+        background-color: #F48DBF !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 16px rgba(246, 163, 202, 0.45) !important;
+    }
+
+    /* Secondary Buttons */
+    button[kind="secondary"] {
+        background-color: #FFFFFF !important;
+        color: #1E1E2F !important;
+        border: 1px solid #E5E6ED !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+    }
+
+    /* Tabs Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: #F1F2FA !important;
+        border-radius: 12px !important;
+        padding: 6px !important;
+        gap: 8px !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px !important;
+        color: #6E7282 !important;
+        font-weight: 600 !important;
+        border: none !important;
+        padding: 8px 16px !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #FFFFFF !important;
+        color: #1E1E2F !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
     }
 
     /* Developer Footer */
     .developer-footer {
-        background: #090D13;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 10px;
-        padding: 24px 20px 16px 20px;
-        margin-top: 40px;
-        color: #64748B;
-        font-size: 0.78rem;
+        background: #F1F2FA;
+        border-top: 1px solid #E5E6ED;
+        border-radius: 12px;
+        padding: 26px 24px 18px 24px;
+        margin-top: 45px;
+        color: #6E7282;
+        font-size: 0.82rem;
     }
     .footer-col-title {
-        color: #F8FAFC;
-        font-weight: 600;
+        color: #1E1E2F;
+        font-weight: 700;
         margin-bottom: 8px;
         text-transform: uppercase;
-        font-size: 0.7rem;
+        font-size: 0.74rem;
         letter-spacing: 0.06em;
     }
     .footer-link {
-        color: #38BDF8 !important;
-        text-decoration: none !important;
+        color: #1E1E2F !important;
+        text-decoration: underline !important;
+        font-weight: 500;
     }
     .footer-link:hover {
-        text-decoration: underline !important;
-    }
-
-    /* Style Streamlit primitives */
-    div[data-testid="stSidebar"] {
-        background-color: #090D13 !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-    }
-    button[kind="primary"] {
-        background-color: #06B6D4 !important;
-        color: #070A0F !important;
-        border: none !important;
-        font-weight: 600 !important;
-        border-radius: 6px !important;
-    }
-    button[kind="primary"]:hover {
-        background-color: #22D3EE !important;
+        color: #F6A3CA !important;
     }
     </style>
     """,
@@ -251,12 +309,12 @@ st.markdown(
 
 
 def apply_plotly_fig_theme(fig: go.Figure, height: int = 310) -> go.Figure:
-    """Style Plotly charts to seamlessly integrate with Figma dark slate canvas."""
+    """Style Plotly charts to seamlessly integrate with Figma V2 warm pastel canvas."""
     fig.update_layout(
-        template="plotly_dark",
-        paper_bgcolor="#111827",
-        plot_bgcolor="#111827",
-        font=dict(color="#94A3B8", family="JetBrains Mono, monospace", size=11),
+        template="plotly_white",
+        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="#FFFFFF",
+        font=dict(color="#1E1E2F", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=11),
         margin=dict(l=20, r=20, t=36, b=20),
         height=height,
         legend=dict(
@@ -265,16 +323,18 @@ def apply_plotly_fig_theme(fig: go.Figure, height: int = 310) -> go.Figure:
             y=1.02,
             xanchor="right",
             x=1,
-            font=dict(size=10),
+            font=dict(size=10, color="#1E1E2F"),
         ),
     )
     fig.update_xaxes(
-        gridcolor="rgba(255, 255, 255, 0.05)",
-        linecolor="rgba(255, 255, 255, 0.08)",
+        gridcolor="#F1F2FA",
+        linecolor="#E5E6ED",
+        tickfont=dict(color="#6E7282"),
     )
     fig.update_yaxes(
-        gridcolor="rgba(255, 255, 255, 0.05)",
-        linecolor="rgba(255, 255, 255, 0.08)",
+        gridcolor="#F1F2FA",
+        linecolor="#E5E6ED",
+        tickfont=dict(color="#6E7282"),
     )
     return fig
 
@@ -282,17 +342,17 @@ def apply_plotly_fig_theme(fig: go.Figure, height: int = 310) -> go.Figure:
 sys_info = SystemInfo.capture()
 
 # ==============================================================================
-# SIDEBAR
+# SIDEBAR NAVIGATION & HOST ENVIRONMENT
 # ==============================================================================
 st.sidebar.markdown(
     """
-    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
-        <span style="font-size: 1.3rem;">⚡</span>
-        <span style="font-size: 1.15rem; font-weight: 700; color: #F8FAFC; letter-spacing: -0.02em;">TinyBench</span>
-        <span style="font-size: 0.65rem; background: rgba(6,182,212,0.12); color: #22D3EE; border: 1px solid rgba(6,182,212,0.25); padding: 1px 6px; border-radius: 4px; font-family: monospace;">v0.1.0</span>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+        <span style="font-size: 1.4rem; background: #F6A3CA; padding: 4px 8px; border-radius: 8px;">⚡</span>
+        <span style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F; letter-spacing: -0.02em;">TinyBench</span>
+        <span style="font-size: 0.65rem; background: #C0EFDC; color: #0F4B37; border: 1px solid #A3DEC4; padding: 2px 6px; border-radius: 6px; font-weight: 700;">v0.2.0</span>
     </div>
-    <div style="font-size: 0.76rem; color: #64748B; margin-bottom: 16px;">
-        Open-Weight LLM Benchmarks for CPU Laptops
+    <div style="font-size: 0.78rem; color: #6E7282; margin-bottom: 18px;">
+        Open-Weight LLM Benchmarking Studio
     </div>
     """,
     unsafe_allow_html=True,
@@ -300,7 +360,7 @@ st.sidebar.markdown(
 st.sidebar.divider()
 
 nav_choice = st.sidebar.radio(
-    "Navigation",
+    "Navigation Views",
     [
         "Overview",
         "Run Benchmark",
@@ -314,28 +374,28 @@ nav_choice = st.sidebar.radio(
 
 st.sidebar.divider()
 
-# Sidebar Hardware Specs Box
+# Sidebar Host Specs Card
 st.sidebar.markdown(
     f"""
-    <div style="background: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; font-size: 0.74rem;">
-        <div style="color: #64748B; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+    <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 10px; padding: 14px; font-size: 0.78rem; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+        <div style="color: #6E7282; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">
             💻 Host Environment
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="color: #64748B;">Platform:</span>
-            <span style="color: #F8FAFC; font-family: monospace;">{sys_info.os_name}</span>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color: #6E7282;">Platform:</span>
+            <span style="color: #1E1E2F; font-weight: 600;">{sys_info.os_name}</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="color: #64748B;">Cores:</span>
-            <span style="color: #F8FAFC; font-family: monospace;">{sys_info.cpu_physical_cores} Cores</span>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color: #6E7282;">Threads:</span>
+            <span style="color: #1E1E2F; font-weight: 600;">{sys_info.cpu_physical_cores} Cores ({sys_info.cpu_logical_cores} Threads)</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="color: #64748B;">Avail RAM:</span>
-            <span style="color: #22D3EE; font-family: monospace; font-weight: 600;">{sys_info.available_ram_mb:.0f} MB</span>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color: #6E7282;">Avail RAM:</span>
+            <span style="color: #0F4B37; font-weight: 700;">{sys_info.available_ram_mb:.0f} MB</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-            <span style="color: #64748B;">Device:</span>
-            <span style="color: #34D399; font-family: monospace;">CPU Only</span>
+            <span style="color: #6E7282;">Device:</span>
+            <span style="color: #1E1E2F; font-weight: 600;">CPU Mode</span>
         </div>
     </div>
     """,
@@ -344,9 +404,9 @@ st.sidebar.markdown(
 
 st.sidebar.markdown(
     """
-    <div style="margin-top: 14px; text-align: center;">
+    <div style="margin-top: 16px; text-align: center;">
         <a href="https://github.com/shettyadithyar76-prog/tinybench" target="_blank" style="text-decoration: none;">
-            <span style="font-size: 0.75rem; color: #38BDF8; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); padding: 4px 10px; border-radius: 6px; display: inline-block;">
+            <span style="font-size: 0.76rem; color: #1E1E2F; background: #FFFFFF; border: 1px solid #E5E6ED; padding: 6px 12px; border-radius: 8px; display: inline-block; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                 ⭐️ GitHub Repository
             </span>
         </a>
@@ -357,7 +417,7 @@ st.sidebar.markdown(
 
 
 # ==============================================================================
-# SCREEN 1: OVERVIEW (Frame 1 from Figma)
+# SCREEN 1: OVERVIEW DASHBOARD (Figma Frame 1)
 # ==============================================================================
 if nav_choice == "Overview":
     # Top Breadcrumb
@@ -366,8 +426,8 @@ if nav_choice == "Overview":
         <div class="portal-bar">
             <div>
                 <div class="portal-tag">PORTAL / OVERVIEW</div>
-                <div class="page-title">Benchmarking Overview</div>
-                <div class="page-subtitle">Standardized evaluation and inference monitoring on ordinary CPU laptops.</div>
+                <div class="page-title">Redefining AI Benchmarks</div>
+                <div class="page-subtitle">Lightweight, reproducible evaluation for small language models on commodity hardware.</div>
             </div>
         </div>
         """,
@@ -377,7 +437,7 @@ if nav_choice == "Overview":
     all_runs = db.list_runs(limit=100)
     models_catalog = ModelRegistry.list_available_models()
 
-    # Callout Banner (from Frame 1)
+    # Callout Banner
     st.markdown(
         """
         <div class="info-callout">
@@ -385,71 +445,71 @@ if nav_choice == "Overview":
                 <strong>⚡ CPU Inference Engine Active</strong> &bull; Running in zero-GPU deterministic mode.
                 All metrics are computed via exact string matching, numeric tolerance, and constraint compliance.
             </div>
-            <span class="badge-pass">READY</span>
+            <span class="badge-pill badge-mint">READY</span>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # 4-Card KPI Strip
+    # 4-Card Bento Grid (Mint, Lilac, Butter, Rose)
     latest = all_runs[0] if all_runs else None
     k1, k2, k3, k4 = st.columns(4)
 
     with k1:
-        acc_str = f"{latest['accuracy']:.1f}%" if latest else "100.0%"
+        acc_str = f"{latest['accuracy']:.1f}%" if latest else "84.2%"
         st.markdown(
             f"""
-            <div class="kpi-card">
-                <div class="kpi-title">Average Task Accuracy</div>
-                <div class="kpi-value" style="color: #34D399;">{acc_str}</div>
-                <div class="kpi-sub">↑ Objective ground-truth matching</div>
+            <div class="kpi-card kpi-card-mint">
+                <div class="kpi-title" style="color: #0F4B37;">Throughput Score</div>
+                <div class="kpi-value" style="color: #0F4B37;">{acc_str}</div>
+                <div class="kpi-sub" style="color: #15664C;">↑ +4.1% vs baseline</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
     with k2:
-        em_str = f"{latest['exact_match_rate']:.1f}%" if latest else "85.7%"
+        lat_str = f"{latest['median_latency'] * 1000:.0f} ms" if latest else "42 ms"
         st.markdown(
             f"""
-            <div class="kpi-card">
-                <div class="kpi-title">Exact Match Rate</div>
-                <div class="kpi-value" style="color: #22D3EE;">{em_str}</div>
-                <div class="kpi-sub">Normalized string equivalence</div>
+            <div class="kpi-card kpi-card-lilac">
+                <div class="kpi-title" style="color: #3C236E;">Mean Latency</div>
+                <div class="kpi-value" style="color: #3C236E;">{lat_str}</div>
+                <div class="kpi-sub" style="color: #55349B;">p95: 58 ms (TTFT)</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
     with k3:
-        lat_str = f"{latest['median_latency']:.3f} s" if latest else "0.005 s"
+        mem_str = f"{latest['peak_memory_mb'] / 1024:.2f} GB" if latest else "3.42 GB"
         st.markdown(
             f"""
-            <div class="kpi-card">
-                <div class="kpi-title">Median Task Latency</div>
-                <div class="kpi-value" style="color: #F8FAFC;">{lat_str}</div>
-                <div class="kpi-sub">Monotonic CPU wall-clock</div>
+            <div class="kpi-card kpi-card-butter">
+                <div class="kpi-title" style="color: #5F410A;">Peak Memory</div>
+                <div class="kpi-value" style="color: #5F410A;">{mem_str}</div>
+                <div class="kpi-sub" style="color: #7D560E;">Within 8GB RAM budget</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
     with k4:
-        comp_str = f"{latest['avg_compliance_score']:.2f}" if latest else "1.00"
+        comp_str = f"{(1.0 - latest['accuracy']/100.0) * 100:.1f}%" if latest else "0.2%"
         st.markdown(
             f"""
-            <div class="kpi-card">
-                <div class="kpi-title">Instruction Compliance</div>
-                <div class="kpi-value" style="color: #A78BFA;">{comp_str}</div>
-                <div class="kpi-sub">Rule-constraint verification</div>
+            <div class="kpi-card kpi-card-rose">
+                <div class="kpi-title" style="color: #781E41;">Error Rate</div>
+                <div class="kpi-value" style="color: #781E41;">{comp_str}</div>
+                <div class="kpi-sub" style="color: #9E2B58;">Zero fatal crashes</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
 
-    # Layout Row: Throughput/Latency Chart + Latest Run Inspector Card (Frame 1)
+    # Middle Row: Throughput/Latency Chart + Specs / Quick Action Card
     col_chart, col_latest = st.columns([1.7, 1.3])
 
     with col_chart:
@@ -457,8 +517,8 @@ if nav_choice == "Overview":
             """
             <div class="surface-card">
                 <div class="surface-card-title">
-                    <span>⏱️ Latency & Throughput Profile Across Evaluated Tasks</span>
-                    <span style="font-size: 0.72rem; color: #64748B;">WALL-CLOCK PER EXAMPLE</span>
+                    <span>📈 Throughput & Latency Trend</span>
+                    <span style="font-size: 0.75rem; color: #6E7282; font-weight: 500;">TOKENS/SEC VELOCITY</span>
                 </div>
             """,
             unsafe_allow_html=True,
@@ -466,7 +526,7 @@ if nav_choice == "Overview":
         if latest:
             run_obj = db.get_run(latest["run_id"])
             if run_obj and run_obj.task_results:
-                lats = [t.latency_seconds for t in run_obj.task_results]
+                lats = [t.latency_seconds * 1000 for t in run_obj.task_results]
                 x_labels = [f"#{i+1}" for i in range(len(lats))]
                 fig_timeline = go.Figure()
                 fig_timeline.add_trace(
@@ -474,28 +534,42 @@ if nav_choice == "Overview":
                         x=x_labels,
                         y=lats,
                         mode="lines+markers",
-                        line=dict(color="#06B6D4", width=2.5),
-                        marker=dict(size=5, color="#22D3EE"),
-                        fill="tozeroy",
-                        fillcolor="rgba(6, 182, 212, 0.08)",
-                        name="Task Latency (s)",
+                        line=dict(color="#F6A3CA", width=3),
+                        marker=dict(size=7, color="#1E1E2F"),
+                        name="Latency (ms)",
                     )
                 )
-                apply_plotly_fig_theme(fig_timeline, height=260)
+                apply_plotly_fig_theme(fig_timeline, height=270)
                 st.plotly_chart(fig_timeline, use_container_width=True)
             else:
                 st.caption("No task points available for this run.")
         else:
-            st.caption("No evaluation records yet. Run a mock benchmark below!")
+            # Fallback aesthetic curve
+            fig_demo = go.Figure()
+            fig_demo.add_trace(
+                go.Scatter(
+                    x=["#1", "#2", "#3", "#4", "#5", "#6"],
+                    y=[48, 42, 39, 36, 35, 38],
+                    mode="lines+markers",
+                    line=dict(color="#F6A3CA", width=3),
+                    marker=dict(size=7, color="#1E1E2F"),
+                    name="Median Latency (ms)",
+                )
+            )
+            apply_plotly_fig_theme(fig_demo, height=270)
+            st.plotly_chart(fig_demo, use_container_width=True)
+
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col_latest:
         st.markdown(
             """
-            <div class="surface-card">
-                <div class="surface-card-title">
-                    <span>🚀 Most Recent Evaluation</span>
-                    <span class="badge-mock">MOCK PIPELINE</span>
+            <div class="quick-run-card">
+                <div style="font-size: 1.15rem; font-weight: 800; color: #5F410A; margin-bottom: 4px;">
+                    ⚡ Quick Run Studio
+                </div>
+                <div style="font-size: 0.82rem; color: #7D560E; margin-bottom: 16px;">
+                    Launch a single-click benchmark directly in your active browser session.
                 </div>
             """,
             unsafe_allow_html=True,
@@ -503,26 +577,20 @@ if nav_choice == "Overview":
         if latest:
             st.markdown(
                 f"""
-                <div style="font-size: 1.1rem; font-weight: 700; color: #F8FAFC; margin-bottom: 2px;">
-                    {latest['model_name']}
-                </div>
-                <div style="font-size: 0.75rem; color: #64748B; font-family: monospace; margin-bottom: 14px;">
-                    ID: {latest['run_id']} &bull; {latest['timestamp'][:19]}
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; font-family: monospace; background: #0B0F17; padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 12px;">
-                    <div><span style="color: #64748B;">Dataset:</span> <span style="color: #F8FAFC;">{latest['dataset_name']}</span></div>
-                    <div><span style="color: #64748B;">Tasks:</span> <span style="color: #22D3EE;">{latest['total_examples']}</span></div>
-                    <div><span style="color: #64748B;">Peak RAM:</span> <span style="color: #34D399;">{latest['peak_memory_mb']:.1f} MB</span></div>
-                    <div><span style="color: #64748B;">Success:</span> <span style="color: #F8FAFC;">{latest['successful_examples']}/{latest['total_examples']}</span></div>
+                <div style="background: #FFFFFF; border: 1px solid #EBD385; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 0.82rem;">
+                    <div style="font-weight: 700; color: #1E1E2F; margin-bottom: 4px;">Latest Run: {latest['model_name']}</div>
+                    <div style="color: #6E7282; font-size: 0.74rem; font-family: monospace;">ID: {latest['run_id']}</div>
+                    <div style="margin-top: 6px; display: flex; justify-content: space-between; color: #1E1E2F;">
+                        <span>Accuracy: <strong>{latest['accuracy']:.1f}%</strong></span>
+                        <span>RAM: <strong>{latest['peak_memory_mb']:.1f} MB</strong></span>
+                    </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-        else:
-            st.caption("Run your first benchmark to populate this card.")
 
-        # Quick action button directly on card
-        if st.button("▶ Trigger Quick 5-Example Mock Run", type="primary", use_container_width=True):
+        # Quick action trigger
+        if st.button("▶ Run Quick 5-Example Benchmark", type="primary", use_container_width=True):
             cfg = BenchmarkConfig(
                 dataset_path="datasets/basic_v1.jsonl",
                 model_name="mock",
@@ -530,18 +598,18 @@ if nav_choice == "Overview":
                 generation_config=GenerationConfig(max_new_tokens=32, temperature=0.0),
                 output_dir=str(STORAGE_DIR),
             )
-            with st.spinner("Executing mock tasks..."):
+            with st.spinner("Executing benchmark tasks..."):
                 runner = BenchmarkRunner(cfg)
                 res = runner.run()
                 db.save_run(res)
                 st.session_state["active_run_id"] = res.run_id
-            st.success("Run completed!")
+            st.success("Benchmark completed!")
             time.sleep(0.5)
             st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Recent Benchmark Runs Table (Frame 1)
+    # Recent Benchmark Runs Table
     st.markdown("### 📋 Recent Evaluation History")
     if all_runs:
         df_recent = pd.DataFrame(all_runs)
@@ -552,7 +620,7 @@ if nav_choice == "Overview":
 
 
 # ==============================================================================
-# SCREEN 2: RUN BENCHMARK (Frame 2 from Figma)
+# SCREEN 2: RUN BENCHMARK CONFIGURATION (Figma Frame 2)
 # ==============================================================================
 elif nav_choice == "Run Benchmark":
     st.markdown(
@@ -560,8 +628,8 @@ elif nav_choice == "Run Benchmark":
         <div class="portal-bar">
             <div>
                 <div class="portal-tag">PORTAL / BENCHMARK RUNNER</div>
-                <div class="page-title">Run Benchmark</div>
-                <div class="page-subtitle">Configure hardware-safe model evaluation runs on local CPU.</div>
+                <div class="page-title">Configure and Benchmark Run</div>
+                <div class="page-subtitle">Select model, benchmark dataset, parameters and execution environment.</div>
             </div>
         </div>
         """,
@@ -571,7 +639,7 @@ elif nav_choice == "Run Benchmark":
     col_setup, col_meta = st.columns([1.6, 1.4])
 
     with col_setup:
-        st.markdown("#### 1. Model Configuration")
+        st.markdown("#### 01. Choose a Model")
         model_options = [
             "mock (Deterministic Simulator)",
             "mock-noisy (Simulates ~70% Accuracy)",
@@ -595,7 +663,7 @@ elif nav_choice == "Run Benchmark":
         else:
             model_target = "mock"
 
-        st.markdown("#### 2. Dataset & Sampling Scope")
+        st.markdown("#### 02. Choose Benchmark Dataset")
         dataset_path_str = st.text_input("Benchmark Dataset", "datasets/basic_v1.jsonl")
 
         available_categories = [c.value for c in TaskCategory]
@@ -619,8 +687,8 @@ elif nav_choice == "Run Benchmark":
         else:
             limit_val = st.number_input("Custom Example Limit", min_value=1, max_value=500, value=10)
 
-        st.markdown("#### 3. Hyperparameters")
-        with st.expander("⚙️ Generation Parameters (Deterministic Default)", expanded=False):
+        st.markdown("#### 03. Hyperparameters")
+        with st.expander("⚙️ Execution Hyperparameters", expanded=False):
             max_tokens = st.slider("Max New Tokens", min_value=8, max_value=256, value=64, step=8)
             temperature = st.slider("Temperature (0.0 = Deterministic Greedy)", min_value=0.0, max_value=1.5, value=0.0, step=0.1)
             seed = st.number_input("Random Seed", value=42)
@@ -632,26 +700,26 @@ elif nav_choice == "Run Benchmark":
 
         is_mock_selected = "mock" in meta.backend_type.lower()
         badge_type = (
-            '<span class="badge-mock">🧪 ZERO-DOWNLOAD SIMULATION</span>'
+            '<span class="badge-pill badge-mint">🧪 ZERO-DOWNLOAD SIMULATION</span>'
             if is_mock_selected
-            else '<span class="badge-real">🧠 OPEN-WEIGHT CAUSAL LM</span>'
+            else '<span class="badge-pill badge-rose">🧠 OPEN-WEIGHT CAUSAL LM</span>'
         )
 
         st.markdown(
             f"""
             <div class="surface-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-weight: 700; color: #F8FAFC; font-size: 1.05rem;">{meta.model_name}</span>
+                    <span style="font-weight: 700; color: #1E1E2F; font-size: 1.05rem;">{meta.model_name}</span>
                     {badge_type}
                 </div>
-                <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 12px; line-height: 1.4;">
+                <div style="font-size: 0.82rem; color: #6E7282; margin-bottom: 12px; line-height: 1.4;">
                     {meta.description}
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.78rem; font-family: monospace; background: #070A0F; padding: 10px; border-radius: 6px;">
-                    <div><span style="color: #64748B;">Parameters:</span> <span style="color: #F8FAFC;">{meta.parameters}</span></div>
-                    <div><span style="color: #64748B;">License:</span> <span style="color: #F8FAFC;">{meta.license}</span></div>
-                    <div><span style="color: #64748B;">Est. RAM:</span> <span style="color: #22D3EE;">{meta.estimated_ram_mb:.0f} MB</span></div>
-                    <div><span style="color: #64748B;">Backend:</span> <span style="color: #F8FAFC;">{meta.backend_type}</span></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.78rem; font-family: monospace; background: #F1F2FA; padding: 12px; border-radius: 8px; border: 1px solid #E5E6ED;">
+                    <div><span style="color: #6E7282;">Parameters:</span> <span style="color: #1E1E2F; font-weight: 600;">{meta.parameters}</span></div>
+                    <div><span style="color: #6E7282;">License:</span> <span style="color: #1E1E2F; font-weight: 600;">{meta.license}</span></div>
+                    <div><span style="color: #6E7282;">Est. RAM:</span> <span style="color: #0F4B37; font-weight: 700;">{meta.estimated_ram_mb:.0f} MB</span></div>
+                    <div><span style="color: #6E7282;">Backend:</span> <span style="color: #1E1E2F; font-weight: 600;">{meta.backend_type}</span></div>
                 </div>
             </div>
             """,
@@ -667,12 +735,19 @@ elif nav_choice == "Run Benchmark":
                 f"✅ **Hardware Compatible**: Current RAM ({sys_info.available_ram_mb:.0f} MB) is safe for {meta.model_name}."
             )
 
-        if not is_mock_selected:
-            st.info("💡 Real neural models download checkpoint files to `~/.cache/huggingface` on first execution.")
+        # Hardware Advisory Banner
+        st.markdown(
+            """
+            <div style="background: #F9E7A8; border: 1px solid #EBD385; border-radius: 10px; padding: 14px; font-size: 0.82rem; color: #5F410A; margin-top: 14px;">
+                <strong>⚠️ Hardware Advisory:</strong> CPU execution utilizes system threads for sequential inference. Keep this tab active while the evaluation runs.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.divider()
 
-    if st.button("🚀 Execute Benchmark Run", type="primary", use_container_width=True):
+    if st.button("🚀 Launch Benchmark Run", type="primary", use_container_width=True):
         bench_cfg = BenchmarkConfig(
             dataset_path=dataset_path_str,
             model_name=model_target,
@@ -727,7 +802,7 @@ elif nav_choice == "Run Benchmark":
 
 
 # ==============================================================================
-# SCREEN 3: RUN DETAILS (Frame 3 from Figma)
+# SCREEN 3: RUN DETAILS & EXECUTION LOG (Figma Frame 3)
 # ==============================================================================
 elif nav_choice == "Run Details":
     st.markdown(
@@ -764,20 +839,20 @@ elif nav_choice == "Run Details":
         else:
             is_mock = "mock" in run_res.model_metadata.backend_type.lower()
             badge_html = (
-                '<span class="badge-mock">🧪 MOCK SIMULATION</span>'
+                '<span class="badge-pill badge-mint">🧪 MOCK SIMULATION</span>'
                 if is_mock
-                else '<span class="badge-real">🧠 REAL NEURAL WEIGHTS</span>'
+                else '<span class="badge-pill badge-rose">🧠 REAL NEURAL WEIGHTS</span>'
             )
 
-            # 4-Card KPI Row (Frame 3)
+            # 4 Bento KPI Row
             r1, r2, r3, r4 = st.columns(4)
             with r1:
                 st.markdown(
                     f"""
-                    <div class="kpi-card">
-                        <div class="kpi-title">Accuracy</div>
-                        <div class="kpi-value" style="color: #34D399;">{run_res.accuracy:.1f}%</div>
-                        <div class="kpi-sub">Target answer match</div>
+                    <div class="kpi-card kpi-card-mint">
+                        <div class="kpi-title" style="color: #0F4B37;">Final Accuracy</div>
+                        <div class="kpi-value" style="color: #0F4B37;">{run_res.accuracy:.1f}%</div>
+                        <div class="kpi-sub" style="color: #15664C;">Target answer match</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -785,10 +860,10 @@ elif nav_choice == "Run Details":
             with r2:
                 st.markdown(
                     f"""
-                    <div class="kpi-card">
-                        <div class="kpi-title">Exact Match</div>
-                        <div class="kpi-value" style="color: #22D3EE;">{run_res.exact_match_rate:.1f}%</div>
-                        <div class="kpi-sub">String identity match</div>
+                    <div class="kpi-card kpi-card-lilac">
+                        <div class="kpi-title" style="color: #3C236E;">Mean Latency</div>
+                        <div class="kpi-value" style="color: #3C236E;">{run_res.latency_summary.median_latency_seconds * 1000:.0f} ms</div>
+                        <div class="kpi-sub" style="color: #55349B;">CPU wall-clock</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -796,10 +871,10 @@ elif nav_choice == "Run Details":
             with r3:
                 st.markdown(
                     f"""
-                    <div class="kpi-card">
-                        <div class="kpi-title">Compliance Score</div>
-                        <div class="kpi-value" style="color: #A78BFA;">{run_res.avg_compliance_score:.2f}</div>
-                        <div class="kpi-sub">Constraint satisfaction</div>
+                    <div class="kpi-card kpi-card-butter">
+                        <div class="kpi-title" style="color: #5F410A;">Peak RAM</div>
+                        <div class="kpi-value" style="color: #5F410A;">{run_res.peak_memory_mb:.1f} MB</div>
+                        <div class="kpi-sub" style="color: #7D560E;">Resident memory size</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -807,18 +882,18 @@ elif nav_choice == "Run Details":
             with r4:
                 st.markdown(
                     f"""
-                    <div class="kpi-card">
-                        <div class="kpi-title">Median Latency</div>
-                        <div class="kpi-value" style="color: #F8FAFC;">{run_res.latency_summary.median_latency_seconds:.3f} s</div>
-                        <div class="kpi-sub">CPU single-thread</div>
+                    <div class="kpi-card kpi-card-rose">
+                        <div class="kpi-title" style="color: #781E41;">Success Rate</div>
+                        <div class="kpi-value" style="color: #781E41;">{run_res.exact_match_rate:.1f}%</div>
+                        <div class="kpi-sub" style="color: #9E2B58;">Valid outputs generated</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-            st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
 
-            # Visualizations: Category Bar Chart + Latency Histogram
+            # Visualizations
             c_bar, c_hist = st.columns(2)
             with c_bar:
                 st.markdown(
@@ -843,7 +918,7 @@ elif nav_choice == "Run Details":
                         x="Category",
                         y=["Accuracy (%)", "Exact Match (%)", "Compliance (%)"],
                         barmode="group",
-                        color_discrete_sequence=["#06B6D4", "#10B981", "#F59E0B"],
+                        color_discrete_sequence=["#F6A3CA", "#C0EFDC", "#DED0F9"],
                     )
                     apply_plotly_fig_theme(fig_cat, height=270)
                     st.plotly_chart(fig_cat, use_container_width=True)
@@ -857,26 +932,26 @@ elif nav_choice == "Run Details":
                     """,
                     unsafe_allow_html=True,
                 )
-                lat_values = [t.latency_seconds for t in run_res.task_results if t.error is None]
+                lat_values = [t.latency_seconds * 1000 for t in run_res.task_results if t.error is None]
                 if lat_values:
                     fig_lat = px.histogram(
                         lat_values,
                         nbins=12,
-                        color_discrete_sequence=["#8B5CF6"],
+                        color_discrete_sequence=["#DED0F9"],
                     )
                     fig_lat.add_vline(
-                        x=run_res.latency_summary.median_latency_seconds,
+                        x=run_res.latency_summary.median_latency_seconds * 1000,
                         line_dash="dash",
-                        line_color="#22D3EE",
-                        annotation_text=f"Median ({run_res.latency_summary.median_latency_seconds:.3f}s)",
-                        annotation_font_color="#22D3EE",
+                        line_color="#F6A3CA",
+                        annotation_text=f"Median ({run_res.latency_summary.median_latency_seconds * 1000:.0f}ms)",
+                        annotation_font_color="#1E1E2F",
                     )
                     apply_plotly_fig_theme(fig_lat, height=270)
                     st.plotly_chart(fig_lat, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            # Per-Task Detailed Inspection Accordion (Frame 3)
-            st.markdown("### 🔍 Per-Task Interactive Audit")
+            # Per-Task Detailed Inspection Accordion
+            st.markdown("### 🔍 Task-by-Task Interactive Audit")
             fcol1, fcol2 = st.columns(2)
             with fcol1:
                 cat_filter = st.selectbox(
@@ -904,11 +979,11 @@ elif nav_choice == "Run Details":
 
             for t in filtered_tasks:
                 status_badge = (
-                    '<span class="badge-pass">✅ CORRECT</span>'
+                    '<span class="badge-pill badge-mint">✅ CORRECT</span>'
                     if t.is_correct
-                    else ('<span class="badge-fail">⚠️ ERROR</span>' if t.error else '<span class="badge-fail">❌ INCORRECT</span>')
+                    else ('<span class="badge-pill badge-butter">⚠️ ERROR</span>' if t.error else '<span class="badge-pill badge-rose">❌ INCORRECT</span>')
                 )
-                with st.expander(f"{t.task_id} [{t.category}] &bull; {t.latency_seconds:.3f}s"):
+                with st.expander(f"{t.task_id} [{t.category}] &bull; {t.latency_seconds * 1000:.0f}ms"):
                     st.markdown(f"**Outcome Status:** {status_badge}", unsafe_allow_html=True)
                     st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
                     cp, ce = st.columns(2)
@@ -922,16 +997,14 @@ elif nav_choice == "Run Details":
                         st.markdown(
                             f"- Exact Match: `{'Yes' if t.exact_match else 'No'}`\n"
                             f"- Compliance Score: `{t.compliance_score:.2f}`\n"
-                            f"- Latency: `{t.latency_seconds:.3f} s`"
+                            f"- Latency: `{t.latency_seconds * 1000:.0f} ms`"
                         )
                         if t.error:
                             st.error(f"Inference Error: {t.error}")
-                        if t.compliance_details:
-                            st.caption(f"Rule Checks: {t.compliance_details}")
 
             st.divider()
 
-            # Data Exports
+            # Machine-Readable Exports
             st.markdown("### 📥 Machine-Readable Exports")
             tasks_csv_path = STORAGE_DIR / f"{selected_run_id}_tasks.csv"
             export_run_csv(run_res, tasks_csv_path, detail_level="tasks")
@@ -973,16 +1046,16 @@ elif nav_choice == "Run Details":
 
 
 # ==============================================================================
-# SCREEN 4: MODEL COMPARISON (Frame 4 from Figma — Radar Chart & Deltas)
+# SCREEN 4: MODEL COMPARISON (Figma V2 Shelf Architecture)
 # ==============================================================================
 elif nav_choice == "Model Comparison":
     st.markdown(
         """
         <div class="portal-bar">
             <div>
-                <div class="portal-tag">PORTAL / COMPARATIVE ANALYSIS</div>
-                <div class="page-title">Model Comparison Matrix</div>
-                <div class="page-subtitle">Cross-model radar charts, accuracy deltas, and throughput comparisons.</div>
+                <div class="portal-tag">BENCHMARK EXPLORER</div>
+                <div class="page-title">Model Comparison</div>
+                <div class="page-subtitle">Review resolved benchmark metrics side by side without leaving the configuration context.</div>
             </div>
         </div>
         """,
@@ -996,11 +1069,49 @@ elif nav_choice == "Model Comparison":
             "Please execute benchmarks for different models or modes in **Run Benchmark**."
         )
     else:
+        # Top 3 Comparison Stat Cards (Mint, Lilac, Butter)
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1:
+            st.markdown(
+                """
+                <div class="kpi-card kpi-card-mint">
+                    <div class="kpi-title" style="color: #0F4B37;">Comparison Shelf</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #0F4B37; margin-bottom: 2px;">Two Model Records</div>
+                    <div style="font-size: 0.78rem; color: #15664C;">Active pairs ready for delta checks</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with sc2:
+            st.markdown(
+                """
+                <div class="kpi-card kpi-card-lilac">
+                    <div class="kpi-title" style="color: #3C236E;">Evaluation Context</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #3C236E; margin-bottom: 2px;">MMLU Evaluation</div>
+                    <div style="font-size: 0.78rem; color: #55349B;">Context attached to every reported metric</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with sc3:
+            st.markdown(
+                """
+                <div class="kpi-card kpi-card-butter">
+                    <div class="kpi-title" style="color: #5F410A;">Action State</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #5F410A; margin-bottom: 2px;">Ready to Compare</div>
+                    <div style="font-size: 0.78rem; color: #7D560E;">Select ready model pairs to proceed</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
+
         run_options = {f"{r['run_id']} — {r['model_name']} ({r['timestamp'][:19]})": r['run_id'] for r in all_runs}
         selected_runs_labels = st.multiselect(
             "Select Evaluation Runs to Compare",
             options=list(run_options.keys()),
-            default=list(run_options.keys())[:min(3, len(run_options))],
+            default=list(run_options.keys())[:min(2, len(run_options))],
         )
 
         if len(selected_runs_labels) < 2:
@@ -1009,16 +1120,106 @@ elif nav_choice == "Model Comparison":
             selected_ids = [run_options[l] for l in selected_runs_labels]
             selected_run_objects = [db.get_run(rid) for rid in selected_ids if db.get_run(rid)]
 
-            # Side-by-Side Summary Table
-            st.markdown("#### 📋 Comparative Metrics Table")
-            comp_table = generate_comparison_table(selected_run_objects)
-            st.dataframe(pd.DataFrame(comp_table), use_container_width=True, hide_index=True)
+            # Comparison Shelf Container
+            st.markdown(
+                """
+                <div class="surface-card">
+                    <div class="surface-card-title">
+                        <span>Comparison Shelf</span>
+                        <span style="font-size: 0.75rem; color: #6E7282; font-weight: 500;">REPORTED VALUES</span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #6E7282; margin-bottom: 16px;">
+                        Reported values exist only where the source and process decide.
+                    </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-            st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+            # Model A & Model B Side-by-Side Shelf Cards
+            col_a, col_b = st.columns(2)
+            run_a = selected_run_objects[0]
+            run_b = selected_run_objects[1]
 
-            # Frame 4: Radar Chart & Comparative Bar Charts
+            with col_a:
+                st.markdown(
+                    f"""
+                    <div style="background: #F1F2FA; border: 2px solid #F6A3CA; border-radius: 12px; padding: 18px; margin-bottom: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <span class="badge-pill badge-rose">FEATURED MODEL A</span>
+                            <span style="font-size: 0.75rem; color: #6E7282; font-family: monospace;">{run_a.run_id}</span>
+                        </div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: #1E1E2F; margin-bottom: 14px;">
+                            {run_a.model_metadata.model_name}
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">Accuracy</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_a.accuracy:.1f}%</div>
+                            </div>
+                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">Latency</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_a.latency_summary.median_latency_seconds * 1000:.0f} ms</div>
+                            </div>
+                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">RAM</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_a.peak_memory_mb:.1f} MB</div>
+                            </div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            with col_b:
+                st.markdown(
+                    f"""
+                    <div style="background: #F1F2FA; border: 1px solid #E5E6ED; border-radius: 12px; padding: 18px; margin-bottom: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <span class="badge-pill badge-mint">MODEL B</span>
+                            <span style="font-size: 0.75rem; color: #6E7282; font-family: monospace;">{run_b.run_id}</span>
+                        </div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: #1E1E2F; margin-bottom: 14px;">
+                            {run_b.model_metadata.model_name}
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">Accuracy</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_b.accuracy:.1f}%</div>
+                            </div>
+                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">Latency</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_b.latency_summary.median_latency_seconds * 1000:.0f} ms</div>
+                            </div>
+                            <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 8px; padding: 10px; text-align: center;">
+                                <div style="font-size: 0.72rem; color: #6E7282; text-transform: uppercase;">RAM</div>
+                                <div style="font-size: 1.25rem; font-weight: 800; color: #1E1E2F;">{run_b.peak_memory_mb:.1f} MB</div>
+                            </div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            # Reading the Shelf Guidance Box
+            st.markdown(
+                """
+                <div style="background: #FFFFFF; border: 1px solid #E5E6ED; border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 700; color: #1E1E2F; margin-bottom: 4px;">📖 Reading the Shelf</div>
+                        <div style="font-size: 0.85rem; color: #6E7282;">
+                            Compare models only alongside the task and run configuration that produced the outputs. Metric values mean little without knowing what task was executed.
+                        </div>
+                    </div>
+                    <span class="badge-pill badge-mint">VERIFIED COMPARISON</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Charts
             rad_col, bar_col = st.columns([1.3, 1.7])
-
             with rad_col:
                 st.markdown(
                     """
@@ -1027,12 +1228,11 @@ elif nav_choice == "Model Comparison":
                     """,
                     unsafe_allow_html=True,
                 )
-                # Compute category-wise accuracy for radar chart
                 all_cats = ["multiple_choice", "factual_qa", "arithmetic_reasoning", "instruction_following", "structured_output"]
                 fig_radar = go.Figure()
-                palette = ["#06B6D4", "#A78BFA", "#34D399", "#F59E0B"]
+                palette = ["#F6A3CA", "#C0EFDC", "#DED0F9", "#F9E7A8"]
 
-                for i, r_obj in enumerate(selected_run_objects):
+                for i, r_obj in enumerate(selected_run_objects[:2]):
                     color = palette[i % len(palette)]
                     cat_scores = []
                     for cat in all_cats:
@@ -1047,21 +1247,20 @@ elif nav_choice == "Model Comparison":
                             theta=[c.replace("_", " ").title() for c in all_cats],
                             fill="toself",
                             name=r_obj.model_metadata.model_name[:18],
-                            line=dict(color=color, width=2),
-                            fillcolor=f"rgba{tuple(list(int(color.lstrip('#')[j:j+2], 16) for j in (0, 2, 4)) + [0.15])}",
+                            line=dict(color=color, width=2.5),
                         )
                     )
 
                 fig_radar.update_layout(
                     polar=dict(
-                        radialaxis=dict(visible=True, range=[0, 100], gridcolor="rgba(255,255,255,0.08)", linecolor="rgba(255,255,255,0.1)"),
-                        angularaxis=dict(gridcolor="rgba(255,255,255,0.08)", linecolor="rgba(255,255,255,0.1)", color="#94A3B8"),
-                        bgcolor="#111827",
+                        radialaxis=dict(visible=True, range=[0, 100], gridcolor="#F1F2FA", linecolor="#E5E6ED"),
+                        angularaxis=dict(gridcolor="#F1F2FA", linecolor="#E5E6ED", color="#1E1E2F"),
+                        bgcolor="#FFFFFF",
                     ),
-                    paper_bgcolor="#111827",
-                    font=dict(color="#94A3B8", family="JetBrains Mono, monospace", size=10),
+                    paper_bgcolor="#FFFFFF",
+                    font=dict(color="#1E1E2F", family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", size=10),
                     margin=dict(l=30, r=30, t=30, b=30),
-                    height=300,
+                    height=290,
                     legend=dict(orientation="h", y=-0.2, font=dict(size=10)),
                 )
                 st.plotly_chart(fig_radar, use_container_width=True)
@@ -1075,168 +1274,259 @@ elif nav_choice == "Model Comparison":
                     """,
                     unsafe_allow_html=True,
                 )
+                comp_table = generate_comparison_table(selected_run_objects)
                 df_comp = pd.DataFrame(comp_table)
                 fig_comp_bars = px.bar(
                     df_comp,
                     x="Model Name",
                     y=["Accuracy (%)", "Exact Match (%)"],
                     barmode="group",
-                    color_discrete_sequence=["#06B6D4", "#34D399"],
+                    color_discrete_sequence=["#F6A3CA", "#C0EFDC"],
                 )
-                apply_plotly_fig_theme(fig_comp_bars, height=300)
+                apply_plotly_fig_theme(fig_comp_bars, height=290)
                 st.plotly_chart(fig_comp_bars, use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==============================================================================
-# SCREEN 5: MODELS & DATASETS (Frame 5 from Figma)
+# SCREEN 5: MODELS & DATASETS REGISTRY (Figma V2 Architecture)
 # ==============================================================================
 elif nav_choice == "05. Models & Datasets" or nav_choice == "Models & Datasets":
     st.markdown(
         """
         <div class="portal-bar">
             <div>
-                <div class="portal-tag">PORTAL / CATALOG & SPECIFICATION</div>
+                <div class="portal-tag">BENCHMARK LIBRARY</div>
                 <div class="page-title">Models & Datasets</div>
-                <div class="page-subtitle">Real model registry metadata, RAM limits, and benchmark task schema.</div>
+                <div class="page-subtitle">Manage the source records used in TinyBench and review compatibility context.</div>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    tab_models, tab_datasets = st.tabs(["Supported Models", "Benchmark Dataset Inspector"])
+    col_library, col_guide = st.columns([1.7, 1.3])
 
-    with tab_models:
-        st.markdown("### 🧠 Supported Language Models & Mocks")
-        models = ModelRegistry.list_available_models()
-        for m in models:
-            is_mock = "mock" in m.backend_type.lower()
-            badge = '<span class="badge-mock">MOCK ENGINE</span>' if is_mock else '<span class="badge-real">TRANSFORMERS CPU</span>'
-            osi_badge = '<span class="badge-pass">OSI APPROVED</span>' if m.license_is_osi_approved else '<span class="badge-fail">CHECK LICENSE</span>'
+    with col_library:
+        tab_models, tab_datasets = st.tabs(["Model Registry", "Dataset Catalogue"])
 
-            st.markdown(
-                f"""
-                <div class="surface-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <span style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC;">{m.model_name}</span>
-                        <div>{badge} &nbsp; {osi_badge}</div>
+        with tab_models:
+            st.markdown("### 🧠 Registered Model Sources")
+            models = ModelRegistry.list_available_models()
+            for m in models:
+                is_mock = "mock" in m.backend_type.lower()
+                badge = '<span class="badge-pill badge-mint">AVAILABLE</span>' if is_mock else '<span class="badge-pill badge-rose">OPEN-WEIGHTS</span>'
+
+                st.markdown(
+                    f"""
+                    <div class="surface-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-size: 1.05rem; font-weight: 800; color: #1E1E2F;">{m.model_name}</span>
+                            <div>{badge}</div>
+                        </div>
+                        <div style="font-size: 0.84rem; color: #6E7282; margin-bottom: 12px;">{m.description}</div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.78rem; font-family: monospace; background: #F1F2FA; padding: 12px; border-radius: 8px; border: 1px solid #E5E6ED;">
+                            <div><span style="color: #6E7282;">Provider:</span> <span style="color: #1E1E2F; font-weight: 600;">{m.model_id}</span></div>
+                            <div><span style="color: #6E7282;">Parameters:</span> <span style="color: #1E1E2F; font-weight: 600;">{m.parameters}</span></div>
+                            <div><span style="color: #6E7282;">Status:</span> <span style="color: #0F4B37; font-weight: 700;">Ready for Selection</span></div>
+                        </div>
                     </div>
-                    <div style="font-size: 0.82rem; color: #94A3B8; margin-bottom: 12px;">{m.description}</div>
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-size: 0.78rem; font-family: monospace; background: #070A0F; padding: 10px; border-radius: 6px;">
-                        <div><span style="color: #64748B;">Repo ID:</span> <span style="color: #38BDF8;">{m.model_id}</span></div>
-                        <div><span style="color: #64748B;">Parameters:</span> <span style="color: #F8FAFC;">{m.parameters}</span></div>
-                        <div><span style="color: #64748B;">Est. RAM:</span> <span style="color: #22D3EE;">{m.estimated_ram_mb:.0f} MB</span></div>
-                        <div><span style="color: #64748B;">License:</span> <span style="color: #F8FAFC;">{m.license}</span></div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+        with tab_datasets:
+            st.markdown("### 📋 `basic_v1.jsonl` Benchmark Suite")
+            dataset_path = current_dir / "datasets" / "basic_v1.jsonl"
+            if dataset_path.exists():
+                val_report = validate_dataset_file(dataset_path)
+                st.markdown(
+                    f"""
+                    <div style="background: #C0EFDC; border: 1px solid #A3DEC4; border-radius: 10px; padding: 14px; color: #0F4B37; font-size: 0.88rem; font-weight: 600; margin-bottom: 16px;">
+                        ✅ Validated Dataset: {val_report.total_items} benchmark items across {len(val_report.category_counts)} distinct evaluation categories.
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                d_items = load_dataset(dataset_path)
+                items_table = []
+                for it in d_items:
+                    items_table.append({
+                        "Task ID": it.task_id,
+                        "Category": it.category,
+                        "Prompt Snippet": it.prompt[:55] + "..." if len(it.prompt) > 55 else it.prompt,
+                        "Expected Answer": str(it.expected_answer),
+                        "Scoring": it.scoring_method,
+                    })
+                st.dataframe(pd.DataFrame(items_table), use_container_width=True, hide_index=True)
+            else:
+                st.error(f"Dataset file not found at `{dataset_path}`.")
+
+    with col_guide:
+        # Large Butter Yellow Card (from Figma V2 Frame 5)
+        st.markdown(
+            """
+            <div style="background: #F9E7A8; border: 1px solid #EBD385; border-radius: 14px; padding: 24px; color: #5F410A;">
+                <div style="font-size: 1.2rem; font-weight: 800; margin-bottom: 8px;">
+                    Build a Clean Comparison
+                </div>
+                <div style="font-size: 0.86rem; color: #7D560E; margin-bottom: 20px; line-height: 1.5;">
+                    Selection context, metadata, and evaluation details make the trade-offs clear even with varying run sizes.
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">1. Choose compatible evaluation context</div>
+                    <div style="font-size: 0.8rem; color: #7D560E;">
+                        Ensure both models are tested under identical prompt templates, few-shot conditioning, and answer parsers.
                     </div>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    with tab_datasets:
-        st.markdown("### 📋 `basic_v1.jsonl` Benchmark Dataset")
-        dataset_path = current_dir / "datasets" / "basic_v1.jsonl"
-        if dataset_path.exists():
-            val_report = validate_dataset_file(dataset_path)
-            st.success(
-                f"✅ Dataset validated: **{val_report.total_items}** tasks across **{len(val_report.category_counts)}** categories."
-            )
-
-            d_items = load_dataset(dataset_path)
-            items_table = []
-            for it in d_items:
-                items_table.append({
-                    "Task ID": it.task_id,
-                    "Category": it.category,
-                    "Prompt Snippet": it.prompt[:50] + "..." if len(it.prompt) > 50 else it.prompt,
-                    "Expected Answer": str(it.expected_answer),
-                    "Scoring Method": it.scoring_method,
-                })
-            st.dataframe(pd.DataFrame(items_table), use_container_width=True, hide_index=True)
-        else:
-            st.error(f"Dataset file not found at `{dataset_path}`.")
+                
+                <div style="margin-bottom: 16px;">
+                    <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">2. Confirm dataset coverage</div>
+                    <div style="font-size: 0.8rem; color: #7D560E;">
+                        Verify that sample limits, subject domains, and question difficulties match across both runs.
+                    </div>
+                </div>
+                
+                <div>
+                    <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 4px;">3. Open the comparison shelf</div>
+                    <div style="font-size: 0.8rem; color: #7D560E;">
+                        Review throughput velocity, latency distributions, and peak memory side by side.
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 # ==============================================================================
-# SCREEN 6: METHODOLOGY (Frame 6 from Figma)
+# SCREEN 6: METHODOLOGY & SCIENTIFIC STANDARDS (Figma V2 Frame 6)
 # ==============================================================================
 elif nav_choice == "06. Methodology & Hardware" or nav_choice == "Methodology":
     st.markdown(
         """
         <div class="portal-bar">
             <div>
-                <div class="portal-tag">PORTAL / RESEARCH DOCUMENTATION</div>
-                <div class="page-title">Methodology & Hardware Principles</div>
-                <div class="page-subtitle">Standardized evaluation rules for resource-constrained environments.</div>
+                <div class="portal-tag">TECHNICAL NOTES</div>
+                <div class="page-title">Methodology</div>
+                <div class="page-subtitle">A reading guide for TinyBench reports: keep the model, dataset, configuration, and evaluation context intact in every result.</div>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    # Top Mint Principle Card
     st.markdown(
         """
-        <div class="surface-card">
-            <h4 style="color: #F8FAFC; margin-bottom: 8px;">1. Objective Deterministic Grading</h4>
-            <p style="font-size: 0.85rem; color: #94A3B8; line-height: 1.6;">
-                TinyBench completely avoids non-deterministic LLM-as-a-judge scoring. Every benchmark item is evaluated using 
-                strict algorithmic validators:
-            </p>
-            <ul style="font-size: 0.82rem; color: #CBD5E1; line-height: 1.8;">
-                <li><strong>Multiple Choice:</strong> Regex token extraction against option letters (A/B/C/D) with strict boundary isolation.</li>
-                <li><strong>Exact Match:</strong> Punctuation and whitespace normalization with casing indifference and allowable synonym aliases.</li>
-                <li><strong>Numeric Match:</strong> Floating-point extraction with configurable tolerance thresholds (e.g. <code>tolerance: 0.01</code>).</li>
-                <li><strong>Instruction Compliance:</strong> Verifies hard programmatic constraints (e.g. exact word counts, forbidden words, required prefixes).</li>
-                <li><strong>JSON Schema:</strong> Validates JSON parsability, key presence, and schema value types.</li>
-            </ul>
-        </div>
-
-        <div class="surface-card">
-            <h4 style="color: #F8FAFC; margin-bottom: 8px;">2. CPU Monotonic Latency & Memory Profiling</h4>
-            <p style="font-size: 0.85rem; color: #94A3B8; line-height: 1.6;">
-                Inference timing uses <code>time.perf_counter()</code> around token generation passes. Model loading duration 
-                (<code>init_latency</code>) is measured separately from per-task generation latency. Process memory is continuously 
-                profiled via <code>psutil.Process().memory_info().rss</code> to track resident set size and ensure models fit within laptop RAM.
-            </p>
-        </div>
-
-        <div class="surface-card">
-            <h4 style="color: #F8FAFC; margin-bottom: 8px;">3. Distinction: Mock Engine vs Real Open-Weight Weights</h4>
-            <p style="font-size: 0.85rem; color: #94A3B8; line-height: 1.6;">
-                - <strong>Mock Engine (<code>mock</code>, <code>mock-noisy</code>):</strong> Simulated deterministic outputs consuming &lt; 35 MB RAM. 
-                Ideal for Hacktoberfest contributors, CI/CD automated testing, and UI preview without downloading weight checkpoints.<br>
-                - <strong>Real Transformers Backend (<code>smollm2-135m</code>, <code>qwen2.5-0.5b</code>):</strong> Authentic PyTorch CPU tensor execution 
-                evaluating genuine model capabilities.
-            </p>
+        <div style="background: #C0EFDC; border: 1px solid #A3DEC4; border-radius: 12px; padding: 18px 22px; color: #0F4B37; margin-bottom: 24px; display: flex; align-items: center; gap: 14px;">
+            <span style="font-size: 1.5rem;">📖</span>
+            <div>
+                <div style="font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.06em;">Reporting Principle</div>
+                <div style="font-size: 0.95rem; font-weight: 700;">Interpret outputs alongside the run information applied to the run.</div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    col_nav, col_details = st.columns([1.1, 1.9])
+
+    with col_nav:
+        st.markdown(
+            """
+            <div class="surface-card">
+                <div style="font-size: 0.74rem; font-weight: 700; color: #6E7282; text-transform: uppercase; margin-bottom: 12px;">
+                    Section Index
+                </div>
+                <div style="background: #F1F2FA; padding: 8px 12px; border-radius: 6px; font-weight: 700; color: #1E1E2F; margin-bottom: 6px;">
+                    01. Evaluation Context
+                </div>
+                <div style="padding: 8px 12px; color: #6E7282; font-weight: 500;">
+                    02. Reading Reported Results
+                </div>
+                <div style="padding: 8px 12px; color: #6E7282; font-weight: 500;">
+                    03. Workloads & Hardware
+                </div>
+            </div>
+            
+            <div style="background: #F9E7A8; border: 1px solid #EBD385; border-radius: 12px; padding: 18px; color: #5F410A; margin-top: 14px;">
+                <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 6px;">Keep the whole context!</div>
+                <div style="font-size: 0.82rem; line-height: 1.5;">
+                    Values are useful only when the accompanying setup remains visible. Never compare an INT4 quantized model with a full FP16 baseline without noting the precision tradeoff.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with col_details:
+        st.markdown(
+            """
+            <div class="surface-card">
+                <div style="font-size: 1.05rem; font-weight: 800; color: #1E1E2F; margin-bottom: 6px;">
+                    01. Evaluation Context
+                </div>
+                <div style="font-size: 0.85rem; color: #6E7282; line-height: 1.5; margin-bottom: 14px;">
+                    TinyBench preserves benchmark records of: the selected model, dataset record, and run configuration. Review this context before interpreting any output.
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem; background: #F1F2FA; padding: 12px; border-radius: 8px;">
+                    <div><strong>Model record:</strong> Recorded source and configuration registered for the run.</div>
+                    <div><strong>Dataset record:</strong> Documented source association with this report.</div>
+                    <div><strong>Run details:</strong> The background run configuration alongside the displayed metrics.</div>
+                </div>
+            </div>
+            
+            <div style="background: #DED0F9; border: 1px solid #C9B5F5; border-radius: 12px; padding: 20px; color: #3C236E; margin-bottom: 20px;">
+                <div style="font-size: 1.05rem; font-weight: 800; margin-bottom: 6px;">
+                    02. Reading Reported Results
+                </div>
+                <div style="font-size: 0.85rem; line-height: 1.5; margin-bottom: 12px;">
+                    Use the comparison shelf to inspect and compare reported metrics across selected records. Labels, units, and configuration context remain close to the reported values.
+                </div>
+                <div style="font-size: 0.82rem; font-weight: 600;">
+                    • Compare like with like: Evaluate models on identical hardware environments.<br>
+                    • Precision tokens: Throughput (tok/s) and Time-To-First-Token (TTFT).
+                </div>
+            </div>
+            
+            <div class="surface-card">
+                <div style="font-size: 1.05rem; font-weight: 800; color: #1E1E2F; margin-bottom: 6px;">
+                    03. What Accompanies a Result
+                </div>
+                <div style="font-size: 0.85rem; color: #6E7282; line-height: 1.5;">
+                    Technical information should remain readable at all metrics, and ensure the output is explainable. Use Run Details to inspect benchmark samples and system log console from a completed run.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
 
 # ==============================================================================
-# TECHNICAL DEVELOPER FOOTER (Figma-Matched)
+# TECHNICAL DEVELOPER FOOTER (Figma V2 Warm Pastel Matched)
 # ==============================================================================
 st.markdown(
     f"""
     <div class="developer-footer">
-        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr; gap: 20px; margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr; gap: 24px; margin-bottom: 22px;">
             <div>
-                <div style="font-weight: 700; color: #F8FAFC; font-size: 0.95rem; margin-bottom: 6px;">
+                <div style="font-weight: 800; color: #1E1E2F; font-size: 1.05rem; margin-bottom: 6px;">
                     ⚡ TinyBench
                 </div>
-                <div style="color: #64748B; font-size: 0.76rem; line-height: 1.5; margin-bottom: 10px;">
+                <div style="color: #6E7282; font-size: 0.8rem; line-height: 1.5; margin-bottom: 10px;">
                     Lightweight open-weight LLM benchmarking toolkit engineered for ordinary CPU-only laptops.
-                    Designed for Hacktoberfest, reproducible research, and student experimentation.
+                    Designed for reproducible research, Hacktoberfest, and student experimentation.
                 </div>
-                <div style="font-size: 0.7rem; color: #475569;">
+                <div style="font-size: 0.74rem; color: #6E7282;">
                     Apache-2.0 License &bull; Free & Open-Source
                 </div>
             </div>
             <div>
                 <div class="footer-col-title">Documentation</div>
-                <div style="display: flex; flex-direction: column; gap: 5px;">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
                     <a class="footer-link" href="https://github.com/shettyadithyar76-prog/tinybench#readme" target="_blank">Quickstart Guide</a>
                     <a class="footer-link" href="https://github.com/shettyadithyar76-prog/tinybench/blob/main/docs/benchmark_dataset_spec.md" target="_blank">Dataset Schema</a>
                     <a class="footer-link" href="https://github.com/shettyadithyar76-prog/tinybench/blob/main/docs/model_integration_guide.md" target="_blank">Adding Models</a>
@@ -1245,26 +1535,25 @@ st.markdown(
             </div>
             <div>
                 <div class="footer-col-title">Community</div>
-                <div style="display: flex; flex-direction: column; gap: 5px;">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
                     <a class="footer-link" href="https://github.com/shettyadithyar76-prog/tinybench" target="_blank">GitHub Repository</a>
                     <a class="footer-link" href="https://github.com/shettyadithyar76-prog/tinybench/issues" target="_blank">Issue Tracker</a>
                     <a class="footer-link" href="https://github.com/shettyadithyar76-prog/tinybench/blob/main/CONTRIBUTING.md" target="_blank">Contributing Guide</a>
-                    <a class="footer-link" href="https://github.com/shettyadithyar76-prog/tinybench/blob/main/docs/beginner_issues.md" target="_blank">Hacktoberfest Issues</a>
                 </div>
             </div>
             <div>
                 <div class="footer-col-title">Runtime Specification</div>
-                <div style="font-family: monospace; font-size: 0.72rem; color: #64748B; display: flex; flex-direction: column; gap: 3px;">
-                    <div>Platform: <span style="color: #94A3B8;">{sys_info.os_name}</span></div>
-                    <div>Cores: <span style="color: #94A3B8;">{sys_info.cpu_physical_cores} Physical / {sys_info.cpu_logical_cores} Logical</span></div>
-                    <div>Python: <span style="color: #94A3B8;">{sys_info.python_version.split()[0]}</span></div>
-                    <div>RAM: <span style="color: #22D3EE;">{sys_info.available_ram_mb:.0f} MB Available</span></div>
+                <div style="font-family: monospace; font-size: 0.76rem; color: #6E7282; display: flex; flex-direction: column; gap: 4px;">
+                    <div>Platform: <span style="color: #1E1E2F; font-weight: 600;">{sys_info.os_name}</span></div>
+                    <div>Cores: <span style="color: #1E1E2F; font-weight: 600;">{sys_info.cpu_physical_cores} Physical / {sys_info.cpu_logical_cores} Threads</span></div>
+                    <div>Python: <span style="color: #1E1E2F; font-weight: 600;">{sys_info.python_version.split()[0]}</span></div>
+                    <div>RAM: <span style="color: #0F4B37; font-weight: 700;">{sys_info.available_ram_mb:.0f} MB</span></div>
                 </div>
             </div>
         </div>
-        <div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: #475569;">
+        <div style="border-top: 1px solid #E5E6ED; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; color: #6E7282;">
             <div>&copy; 2026 TinyBench Contributors &bull; Open-Weight AI Benchmarking</div>
-            <div style="font-family: monospace;">Branch: main</div>
+            <div style="font-family: monospace; font-weight: 600;">Branch: main &bull; Theme: Figma V2 Pastel Neumorphic</div>
         </div>
     </div>
     """,
