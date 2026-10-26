@@ -1080,6 +1080,10 @@ elif nav_choice == "Run Benchmark":
                 type="password",
                 help="Required to download Llama 3.2 weights after accepting terms at https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct",
             )
+            if hf_token_val and hf_token_val.strip():
+                clean_tok = hf_token_val.strip()
+                os.environ["HF_TOKEN"] = clean_tok
+                os.environ["HUGGING_FACE_HUB_TOKEN"] = clean_tok
 
         if model_target in ("gemma4:e2b", "deepseek-r1:1.5b"):
             current_ollama_url = get_ollama_base_url()
