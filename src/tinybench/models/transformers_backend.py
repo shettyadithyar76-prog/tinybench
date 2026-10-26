@@ -85,7 +85,7 @@ class TransformersModelAdapter(BaseModelAdapter):
         self,
         model_id: str,
         revision: str | None = None,
-        dtype: str = "float32",
+        dtype: str = "bfloat16",
     ) -> None:
         super().__init__(model_id=model_id, revision=revision)
         self.dtype = dtype
@@ -216,22 +216,36 @@ class TransformersModelAdapter(BaseModelAdapter):
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
 
-            torch_dtype = torch.float32 if self.dtype == "float32" else torch.bfloat16
+            if self.dtype == "bfloat16" and hasattr(torch, "bfloat16"):
+                torch_dtype = torch.bfloat16
+            elif self.dtype == "float16" and hasattr(torch, "float16"):
+                torch_dtype = torch.float16
+            else:
+                torch_dtype = torch.float32
 
             logger.info(f"Loading model weights for {self.model_id} on CPU...")
             load_kwargs: dict[str, Any] = {
                 "revision": self.revision,
-                "torch_dtype": torch_dtype,
                 "token": token,
             }
             if _has_accelerate:
                 load_kwargs["device_map"] = "cpu"
                 load_kwargs["low_cpu_mem_usage"] = True
 
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                **load_kwargs,
-            )
+            try:
+                # Modern transformers uses 'dtype'
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_id,
+                    dtype=torch_dtype,
+                    **load_kwargs,
+                )
+            except TypeError:
+                # Fallback for older transformers using 'torch_dtype'
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_id,
+                    torch_dtype=torch_dtype,
+                    **load_kwargs,
+                )
             self.model.eval()
 
             self._is_loaded = True
