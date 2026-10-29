@@ -1,0 +1,16 @@
+{
+  "name": "tinybench",
+  "version": "0.2.0",
+  "description": "A lightweight open-weight LLM benchmarking toolkit for CPU-only laptops",
+  "private": true,
+  "dependencies": {
+    "@vercel/speed-insights": "^1.1.0"
+  },
+  "keywords": [
+    "llm",
+    "benchmark",
+    "nlp",
+    "evaluation"
+  ],
+  "license": "Apache-2.0"
+}

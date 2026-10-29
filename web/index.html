@@ -44,6 +44,12 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
+  <!-- Vercel Speed Insights -->
+  <script type="module">
+    import { injectSpeedInsights } from 'https://cdn.jsdelivr.net/npm/@vercel/speed-insights@1.1.0/dist/index.mjs';
+    injectSpeedInsights();
+  </script>
+
   <style>
     :root {
       --bg-canvas: #0B0F17;
