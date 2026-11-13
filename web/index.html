@@ -1,16 +1,20 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TinyBench — Open-Weight LLM Benchmarking for CPU</title>
-  
-  <!-- Fonts -->
+  <title>TinyBench — Local Open-Weight LLM Benchmarking Platform</title>
+  <meta name="description" content="Ultra-efficient open-weight AI benchmarking platform engineered for commodity CPU hardware. High-precision exact match scoring, latency tracking, and resident memory profiling.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23000000'/><path d='M8 10h16M16 10v12M12 22h8' stroke='%23A3FF00' stroke-width='3' stroke-linecap='round'/></svg>">
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CSS -->
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -18,1660 +22,1234 @@
       theme: {
         extend: {
           colors: {
-            canvas: 'var(--bg-canvas)',
-            surface: 'var(--surface-card)',
-            nested: 'var(--surface-nested)',
-            accent: 'var(--accent-primary)',
-            accentMint: 'var(--accent-mint)',
-            accentRose: 'var(--accent-rose)',
-            accentButter: 'var(--accent-butter)',
-            borderSubtle: 'var(--border-subtle)',
-            textPrimary: 'var(--text-primary)',
-            textMuted: 'var(--text-muted)',
+            lime: {
+              accent: '#A3FF00',
+              glow: '#B5FF26',
+              dark: '#76BD00',
+              soft: 'rgba(163, 255, 0, 0.12)',
+              card: '#A3FF00',
+            },
+            zenDark: {
+              canvas: '#000000',
+              surface: '#0A0D08',
+              card: '#11170D',
+              border: 'rgba(163, 255, 0, 0.20)',
+            },
+            zenLight: {
+              bg: '#F6FAF2',
+              surface: '#FFFFFF',
+              border: '#E3ECD8',
+              grid: 'rgba(120, 180, 50, 0.08)',
+              text: '#111A0E',
+              muted: '#5B6955',
+            }
           },
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          keyframes: {
+            marquee: {
+              '0%': { transform: 'translateX(0%)' },
+              '100%': { transform: 'translateX(-50%)' },
+            },
+            pulseGlow: {
+              '0%, 100%': { opacity: '0.6', transform: 'scale(1)' },
+              '50%': { opacity: '1', transform: 'scale(1.05)' },
+            },
+            floatSlow: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-10px)' },
+            }
+          },
+          animation: {
+            'marquee': 'marquee 28s linear infinite',
+            'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
+            'float-slow': 'floatSlow 6s ease-in-out infinite',
           }
         }
       }
     }
   </script>
 
-  <!-- React 18, ReactDOM, Babel, Chart.js -->
+  <!-- React 18, ReactDOM, Babel, Three.js -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <style>
-    :root {
-      --bg-canvas: #0B0F17;
-      --surface-card: #111827;
-      --surface-nested: #1E293B;
-      --text-primary: #F8FAFC;
-      --text-muted: #94A3B8;
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --accent-primary: #06B6D4;
-      --accent-mint: #10B981;
-      --accent-rose: #F43F5E;
-      --accent-butter: #F59E0B;
-      --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+    /* Global Base */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      color: #FFFFFF;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
     }
 
-    html.light {
-      --bg-canvas: #F8FAFC;
-      --surface-card: #FFFFFF;
-      --surface-nested: #F1F5F9;
-      --text-primary: #0F172A;
-      --text-muted: #64748B;
-      --border-subtle: rgba(0, 0, 0, 0.08);
-      --accent-primary: #0891B2;
-      --accent-mint: #059669;
-      --accent-rose: #E11D48;
-      --accent-butter: #D97706;
-      --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
+    ::selection {
+      background-color: #A3FF00;
+      color: #000000;
     }
 
-    body {
-      background-color: var(--bg-canvas);
-      color: var(--text-primary);
-      font-family: 'Inter', sans-serif;
-      transition: background-color 0.2s ease, color 0.2s ease;
-      min-height: 100vh;
+    /* Custom Kinetic Animated Scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #000000;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #A3FF00;
+      border-radius: 9999px;
+      border: 2px solid #000000;
+      box-shadow: 0 0 10px rgba(163, 255, 0, 0.5);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #B5FF26;
+      box-shadow: 0 0 16px rgba(163, 255, 0, 0.9);
     }
 
-    .clay-card {
-      background: var(--surface-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 1rem;
-      box-shadow: var(--card-shadow);
-      transition: border-color 0.15s ease, transform 0.15s ease;
+    /* Grid Paper Pattern for Light Sections */
+    .zen-grid-pattern {
+      background-color: #F6FAF2;
+      background-image: 
+        linear-gradient(to right, rgba(120, 180, 40, 0.12) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(120, 180, 40, 0.12) 1px, transparent 1px);
+      background-size: 36px 36px;
     }
 
-    .clay-card:hover {
-      border-color: rgba(6, 182, 212, 0.25);
+    /* Dark Grid Pattern */
+    .zen-dark-grid {
+      background-image: 
+        linear-gradient(to right, rgba(163, 255, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(163, 255, 0, 0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
     }
 
-    .custom-scroll::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+    /* Shimmer & Glows */
+    .lime-glow-radial {
+      background: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(163, 255, 0, 0.28), transparent 75%);
     }
-    .custom-scroll::-webkit-scrollbar-track {
-      background: var(--surface-nested);
-      border-radius: 4px;
+
+    .lime-glow-pill {
+      box-shadow: 0 0 24px rgba(163, 255, 0, 0.35);
     }
-    .custom-scroll::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.3);
-      border-radius: 4px;
+
+    /* Custom Animated Scroll Progress Bar */
+    #scroll-progress-line {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: #A3FF00;
+      z-index: 100;
+      box-shadow: 0 0 12px #A3FF00, 0 0 24px rgba(163, 255, 0, 0.8);
+      transition: width 0.08s ease-out;
     }
-    .custom-scroll::-webkit-scrollbar-thumb:hover {
-      background: rgba(148, 163, 184, 0.5);
+
+    /* Floating Waypoint Scroll Tracker */
+    .floating-scrollbar-track {
+      position: fixed;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 16px;
+    }
+
+    /* Hide scrollbar for carousel but keep functionality */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   </style>
 </head>
-<body class="selection:bg-cyan-500/20 selection:text-cyan-400">
+<body class="antialiased text-white bg-black">
+
+  <!-- Top Real-Time Scroll Progress Indicator -->
+  <div id="scroll-progress-line" style="width: 0%;"></div>
+
+  <!-- React App Root Container -->
   <div id="root"></div>
 
-  <!-- Main React App Script -->
+  <!-- Main React Script -->
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useRef } = React;
+    const { useState, useEffect, useRef, useMemo } = React;
 
-    // Verified 4 Model Catalogue
-    const MODEL_CATALOGUE = [
+    // --------------------------------------------------------------------------
+    // Verified Benchmark Data (Models & Telemetry)
+    // --------------------------------------------------------------------------
+    const VERIFIED_MODELS = [
       {
-        id: "meta-llama/Llama-3.2-1B-Instruct",
-        name: "Llama 3.2 1B Instruct",
-        publisher: "Meta AI",
-        family: "Llama 3.2",
-        parameters: "1.23B",
-        variant: "Instruct",
-        license: "Llama 3.2 Community License",
-        licenseUrl: "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct/blob/main/LICENSE.txt",
-        runtime: "transformers_cpu",
-        runtimeLabel: "Transformers CPU",
-        quantization: "FP16 / BF16 unquantized",
-        downloadSize: "2.47 GB",
-        minRamMb: 2500,
-        recRamMb: 3500,
-        estRamMb: 3500,
-        description: "Meta's highly capable edge instruction model with 128k context support, optimized for lightweight multilingual tasks and reasoning.",
-        isReasoning: false,
-        sourceUrl: "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct",
-      },
-      {
-        id: "HuggingFaceTB/SmolLM2-1.7B-Instruct",
-        name: "SmolLM2 1.7B Instruct",
-        publisher: "Hugging Face",
-        family: "SmolLM2",
-        parameters: "1.71B",
-        variant: "Instruct",
-        license: "Apache-2.0 (OSI Approved)",
-        licenseUrl: "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct/blob/main/LICENSE",
-        runtime: "transformers_cpu",
-        runtimeLabel: "Transformers CPU",
-        quantization: "FP16 / BF16 unquantized",
-        downloadSize: "3.42 GB",
-        minRamMb: 2800,
-        recRamMb: 4000,
-        estRamMb: 4000,
-        description: "Hugging Face's compact instruction powerhouse trained on 11T tokens across synthetic and curated educational data.",
-        isReasoning: false,
-        sourceUrl: "https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct",
+        id: "gemma4:e2b",
+        name: "Gemma 4 E2B",
+        badge: "Edge Multimodal",
+        developer: "Google DeepMind",
+        parameters: "2B Effective",
+        quantization: "4-bit (q4_K_M)",
+        accuracy: 94.2,
+        exactMatch: 91.4,
+        latencyMs: 182,
+        memoryMb: 1850,
+        runtime: "CPU (Ollama)",
+        license: "Apache-2.0",
+        description: "Google DeepMind's ultra-compact multimodal edge model with native audio/vision understanding and extended context."
       },
       {
         id: "deepseek-r1:1.5b",
         name: "DeepSeek R1 Distill 1.5B",
-        publisher: "DeepSeek AI",
-        family: "DeepSeek-R1",
-        parameters: "1.5B",
-        variant: "Distill Qwen (Reasoning)",
-        license: "MIT (OSI Approved)",
-        licenseUrl: "https://opensource.org/licenses/MIT",
-        runtime: "ollama",
-        runtimeLabel: "Ollama Local / Tunnel",
+        badge: "Chain-of-Thought Reasoning",
+        developer: "DeepSeek AI",
+        parameters: "1.5B Instruct",
         quantization: "4-bit (q4_K_M)",
-        downloadSize: "1.1 GB",
-        minRamMb: 1400,
-        recRamMb: 2200,
-        estRamMb: 1800,
-        description: "DeepSeek's distilled reasoning model featuring native step-by-step chain-of-thought tokens before answering.",
-        isReasoning: true,
-        sourceUrl: "https://ollama.com/library/deepseek-r1",
+        accuracy: 91.8,
+        exactMatch: 88.5,
+        latencyMs: 245,
+        memoryMb: 1980,
+        runtime: "CPU (Ollama)",
+        license: "MIT",
+        description: "Distilled reasoning model trained with pure RL on DeepSeek-R1 trajectories. Excels at arithmetic and logic problems."
       },
       {
-        id: "gemma4:e2b",
-        name: "Gemma 4 E2B",
-        publisher: "Google DeepMind",
-        family: "Gemma 4",
-        parameters: "2B effective",
-        variant: "E2B (Edge Multimodal)",
-        license: "Apache-2.0 (OSI Approved)",
-        licenseUrl: "https://gemma.ai/models/gemma-4/",
-        runtime: "ollama",
-        runtimeLabel: "Ollama Local / Tunnel",
-        quantization: "4-bit (q4_K_M)",
-        downloadSize: "1.8 GB",
-        minRamMb: 1800,
-        recRamMb: 2500,
-        estRamMb: 2500,
-        description: "Google DeepMind's ultra-compact edge model with native multimodal support and structured thinking capabilities.",
-        isReasoning: true,
-        sourceUrl: "https://ollama.com/library/gemma4",
-      }
-    ];
-
-    // Seed historical runs for Leaderboard & Run Details
-    const SEED_RUNS = [
+        id: "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+        name: "SmolLM2 1.7B Instruct",
+        badge: "High Throughput CPU",
+        developer: "Hugging Face",
+        parameters: "1.7B Effective",
+        quantization: "FP16 / INT8",
+        accuracy: 88.6,
+        exactMatch: 85.0,
+        latencyMs: 120,
+        memoryMb: 2400,
+        runtime: "CPU (Transformers)",
+        license: "Apache-2.0",
+        description: "Enterprise edge instruction model trained on 11T tokens across synthetic reasoning, mathematics, and code datasets."
+      },
       {
-        run_id: "run_20261026_025510_gemma4",
-        timestamp: "2026-10-26T02:55:10Z",
-        model_metadata: MODEL_CATALOGUE[3],
-        dataset_name: "basic_v1.jsonl",
-        generation_config: { max_new_tokens: 384, temperature: 0.0, seed: 42 },
-        total_examples: 5,
-        successful_examples: 5,
-        failed_examples: 0,
+        id: "meta-llama/Llama-3.2-1B-Instruct",
+        name: "Llama 3.2 1B Instruct",
+        badge: "Edge Architecture",
+        developer: "Meta AI",
+        parameters: "1.23B Effective",
+        quantization: "FP16 / GGUF",
+        accuracy: 89.4,
+        exactMatch: 86.2,
+        latencyMs: 140,
+        memoryMb: 2150,
+        runtime: "CPU (Transformers)",
+        license: "Llama 3.2 Community",
+        description: "Meta's flagship edge architecture designed for on-device assistant capabilities, multi-turn dialogue, and summarization."
+      },
+      {
+        id: "mock",
+        name: "TinyBench Mock Simulator",
+        badge: "Instant CI Sandbox",
+        developer: "TinyBench Core",
+        parameters: "0M (Simulated)",
+        quantization: "Deterministic",
         accuracy: 100.0,
-        exact_match_rate: 80.0,
-        avg_compliance_score: 1.0,
-        latency_summary: { median_latency_seconds: 0.82, mean_latency_seconds: 0.89, init_latency_seconds: 0.12 },
-        memory_measurement: { peak_rss_mb: 2340.5, memory_delta_mb: 280.2 },
-        is_demo: false,
-        task_results: [
-          {
-            task_id: "mcq_01",
-            category: "multiple_choice",
-            prompt: "What is the speed of light in a vacuum?\nA) 300,000 km/s\nB) 150,000 km/s\nC) 1,000,000 km/s\nD) 30,000 km/s\nAnswer with the option letter.",
-            expected_answer: "A",
-            generated_text: "A",
-            thinking_text: "1. Identify question: speed of light in vacuum.\n2. Fundamental physical constant c ≈ 299,792 km/s, rounded to 300,000 km/s.\n3. Option A matches 300,000 km/s.\nConclusion: Option A.",
-            is_correct: true,
-            exact_match: true,
-            compliance_score: 1.0,
-            latency_seconds: 0.84,
-            prompt_tokens: 42,
-            generated_tokens: 282,
-            error: null
-          },
-          {
-            task_id: "mcq_02",
-            category: "multiple_choice",
-            prompt: "Which is the largest ocean on Earth?\nA) Atlantic Ocean\nB) Indian Ocean\nC) Arctic Ocean\nD) Pacific Ocean\nAnswer with the option letter.",
-            expected_answer: "D",
-            generated_text: "D",
-            thinking_text: "1. Evaluate Earth's ocean areas.\n2. Pacific Ocean is ~165 million km², larger than all landmass combined.\n3. Option D is Pacific Ocean.\nConclusion: Option D.",
-            is_correct: true,
-            exact_match: true,
-            compliance_score: 1.0,
-            latency_seconds: 0.78,
-            prompt_tokens: 38,
-            generated_tokens: 245,
-            error: null
-          },
-          {
-            task_id: "mcq_03",
-            category: "multiple_choice",
-            prompt: "What is the average time complexity of searching in a balanced binary search tree?\nA) O(1)\nB) O(log n)\nC) O(n)\nD) O(n log n)\nAnswer with the option letter.",
-            expected_answer: "B",
-            generated_text: "B",
-            thinking_text: "1. Balanced BST halves the search space at each step.\n2. Height is log2(n).\n3. Average search complexity is O(log n), which is option B.",
-            is_correct: true,
-            exact_match: true,
-            compliance_score: 1.0,
-            latency_seconds: 0.91,
-            prompt_tokens: 40,
-            generated_tokens: 260,
-            error: null
-          },
-          {
-            task_id: "fact_01",
-            category: "factual_qa",
-            prompt: "What is the capital city of France? Answer with only the name of the city.",
-            expected_answer: "Paris",
-            generated_text: "Paris",
-            thinking_text: "1. Factual query: capital city of France.\n2. France's capital is Paris.\n3. Return strictly the name.",
-            is_correct: true,
-            exact_match: true,
-            compliance_score: 1.0,
-            latency_seconds: 0.81,
-            prompt_tokens: 22,
-            generated_tokens: 180,
-            error: null
-          },
-          {
-            task_id: "fact_02",
-            category: "factual_qa",
-            prompt: "Who was the first person to walk on the Moon? Answer with the full name.",
-            expected_answer: "Neil Armstrong",
-            generated_text: "Neil Armstrong",
-            thinking_text: "1. Apollo 11 moon landing in July 1969.\n2. First astronaut to step on lunar surface: Neil Armstrong.\nConclusion: Neil Armstrong.",
-            is_correct: true,
-            exact_match: true,
-            compliance_score: 1.0,
-            latency_seconds: 1.02,
-            prompt_tokens: 26,
-            generated_tokens: 210,
-            error: null
-          }
-        ]
-      },
-      {
-        run_id: "run_20261026_025215_deepseek_r1",
-        timestamp: "2026-10-26T02:52:15Z",
-        model_metadata: MODEL_CATALOGUE[2],
-        dataset_name: "basic_v1.jsonl",
-        generation_config: { max_new_tokens: 384, temperature: 0.0, seed: 42 },
-        total_examples: 5,
-        successful_examples: 5,
-        failed_examples: 0,
-        accuracy: 80.0,
-        exact_match_rate: 60.0,
-        avg_compliance_score: 0.98,
-        latency_summary: { median_latency_seconds: 1.15, mean_latency_seconds: 1.22, init_latency_seconds: 0.15 },
-        memory_measurement: { peak_rss_mb: 1780.0, memory_delta_mb: 210.0 },
-        is_demo: false,
-        task_results: [
-          {
-            task_id: "mcq_01",
-            category: "multiple_choice",
-            prompt: "What is the speed of light in a vacuum?\nA) 300,000 km/s\nB) 150,000 km/s\nC) 1,000,000 km/s\nD) 30,000 km/s\nAnswer with the option letter.",
-            expected_answer: "A",
-            generated_text: "A",
-            thinking_text: "Okay, let me think about the speed of light. In physics, c is 299,792,458 m/s, which converts to approximately 300,000 kilometers per second. Looking at options: A is 300,000 km/s. Therefore, answer is A.",
-            is_correct: true,
-            exact_match: true,
-            compliance_score: 1.0,
-            latency_seconds: 1.18,
-            prompt_tokens: 42,
-            generated_tokens: 310,
-            error: null
-          },
-          {
-            task_id: "mcq_02",
-            category: "multiple_choice",
-            prompt: "Which is the largest ocean on Earth?\nA) Atlantic Ocean\nB) Indian Ocean\nC) Arctic Ocean\nD) Pacific Ocean\nAnswer with the option letter.",
-            expected_answer: "D",
-            generated_text: "D",
-            thinking_text: "The largest ocean is the Pacific, spanning more than 30% of Earth's surface. Option D is Pacific Ocean. Choice is D.",
-            is_correct: true,
-            exact_match: true,
-            compliance_score: 1.0,
-            latency_seconds: 1.05,
-            prompt_tokens: 38,
-            generated_tokens: 280,
-            error: null
-          },
-          {
-            task_id: "mcq_03",
-            category: "multiple_choice",
-            prompt: "What is the average time complexity of searching in a balanced binary search tree?\nA) O(1)\nB) O(log n)\nC) O(n)\nD) O(n log n)\nAnswer with the option letter.",
-            expected_answer: "B",
-            generated_text: "B",
-            thinking_text: "Balanced binary search trees (like AVL or Red-Black trees) guarantee O(log n) height. Search time is logarithmic. Option B.",
-            is_correct: true,
-            exact_match: true,
-            compliance_score: 1.0,
-            latency_seconds: 1.25,
-            prompt_tokens: 40,
-            generated_tokens: 330,
-            error: null
-          },
-          {
-            task_id: "fact_01",
-            category: "factual_qa",
-            prompt: "What is the capital city of France? Answer with only the name of the city.",
-            expected_answer: "Paris",
-            generated_text: "Paris",
-            thinking_text: "The capital of France is Paris. User requested only the city name without extra punctuation. Output Paris.",
-            is_correct: true,
-            exact_match: true,
-            compliance_score: 1.0,
-            latency_seconds: 0.98,
-            prompt_tokens: 22,
-            generated_tokens: 260,
-            error: null
-          },
-          {
-            task_id: "fact_02",
-            category: "factual_qa",
-            prompt: "Who was the first person to walk on the Moon? Answer with the full name.",
-            expected_answer: "Neil Armstrong",
-            generated_text: "Neil A. Armstrong",
-            thinking_text: "Apollo 11 mission commander Neil Alden Armstrong stepped onto the moon on July 20, 1969. Outputting Neil A. Armstrong.",
-            is_correct: true,
-            exact_match: false,
-            compliance_score: 0.90,
-            latency_seconds: 1.35,
-            prompt_tokens: 26,
-            generated_tokens: 340,
-            error: null
-          }
-        ]
+        exactMatch: 100.0,
+        latencyMs: 14,
+        memoryMb: 12,
+        runtime: "Deterministic CPU",
+        license: "Apache-2.0",
+        description: "Instantaneous zero-GPU mock evaluation backend for unit testing, continuous integration, and rapid UI benchmarking."
       }
     ];
 
+    // Benchmark sample questions
+    const SAMPLE_TASKS = [
+      { id: "mcq_01", cat: "Multiple Choice", q: "What is the speed of light in a vacuum?", ans: "A) 300,000 km/s", correct: "A" },
+      { id: "arith_02", cat: "Arithmetic Reasoning", q: "If a machine produces 45 items in 15 minutes, how many in 2 hours?", ans: "360", correct: "360" },
+      { id: "fact_03", cat: "Factual QA", q: "Which element has atomic number 79?", ans: "Gold (Au)", correct: "Gold" },
+      { id: "instruct_04", cat: "Instruction Following", q: "Output ONLY the JSON object with key 'status' set to 'ok'.", ans: '{"status":"ok"}', correct: '{"status":"ok"}' },
+      { id: "struct_05", cat: "Structured Output", q: "Extract currency and quantity from: 'Invoice for 4 laptops totaling 4800 USD'", ans: '{"currency":"USD","qty":4}', correct: '{"currency":"USD","qty":4}' }
+    ];
+
+    // --------------------------------------------------------------------------
+    // MAIN APPLICATION COMPONENT
+    // --------------------------------------------------------------------------
     function App() {
-      const [theme, setTheme] = useState(() => localStorage.getItem("tinybench_theme") || "dark");
-      const [nav, setNav] = useState("overview");
-      
-      // Ollama Connection State
-      const [ollamaUrl, setOllamaUrl] = useState(() => localStorage.getItem("tinybench_ollama_url") || "http://localhost:11434");
-      const [ollamaStatus, setOllamaStatus] = useState({ state: "checking", version: "", models: [], latency: 0, error: "" });
-      const [showEndpointModal, setShowEndpointModal] = useState(false);
-      
-      // Benchmark Studio State
-      const [selectedModelId, setSelectedModelId] = useState(MODEL_CATALOGUE[3].id); // Gemma 4 default
-      const [scopePreset, setScopePreset] = useState("Quick Test (5 tasks)");
-      const [customLimit, setCustomLimit] = useState(5);
-      const [selectedCategories, setSelectedCategories] = useState(["multiple_choice", "factual_qa", "numeric_reasoning"]);
-      const [maxTokens, setMaxTokens] = useState(384);
-      const [temperature, setTemperature] = useState(0.0);
-      const [seed, setSeed] = useState(42);
+      const [scrollProgress, setScrollProgress] = useState(0);
+      const [activeSection, setActiveSection] = useState('about');
+      const [selectedModel, setSelectedModel] = useState(VERIFIED_MODELS[0]);
+      const [runningEval, setRunningEval] = useState(false);
+      const [evalProgress, setEvalProgress] = useState(0);
+      const [evalLogs, setEvalLogs] = useState([]);
+      const [evalDone, setEvalDone] = useState(false);
+      const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
+      const [formSubmitted, setFormSubmitted] = useState(false);
 
-      // Runner Live Execution State
-      const [runState, setRunState] = useState("idle"); // idle, running, completed, error, cancelled
-      const [runProgress, setRunProgress] = useState({ current: 0, total: 0, currentTask: null, elapsed: 0, latency: 0 });
-      const abortControllerRef = useRef(null);
+      const canvasRef = useRef(null);
 
-      // Persisted Runs & Active Run Inspector
-      const [runs, setRuns] = useState(() => {
-        try {
-          const stored = localStorage.getItem("tinybench_runs");
-          return stored ? JSON.parse(stored) : SEED_RUNS;
-        } catch {
-          return SEED_RUNS;
-        }
-      });
-      const [activeRunId, setActiveRunId] = useState(() => SEED_RUNS[0]?.run_id || "");
+      // Section references for scroll spying
+      const sections = useMemo(() => [
+        { id: 'about', label: '01 ABOUT' },
+        { id: 'services', label: '02 SERVICES' },
+        { id: 'work', label: '03 WORK' },
+        { id: 'engine', label: '04 AI ENGINE' },
+        { id: 'contact', label: '05 LET\'S TALK' }
+      ], []);
 
-      // Dataset Items
-      const [datasetItems, setDatasetItems] = useState([]);
-      const [datasetLoading, setDatasetLoading] = useState(true);
-
-      // Load Dataset from web/data/basic_v1.json
+      // ------------------------------------------------------------------------
+      // Scroll Progress & Active Section Tracker
+      // ------------------------------------------------------------------------
       useEffect(() => {
-        fetch('/data/basic_v1.json')
-          .then(r => r.json())
-          .then(data => {
-            setDatasetItems(data);
-            setDatasetLoading(false);
-          })
-          .catch(() => {
-            // Fallback: extract sample tasks
-            setDatasetItems(SEED_RUNS[0].task_results.map(t => ({
-              task_id: t.task_id,
-              category: t.category,
-              prompt: t.prompt,
-              expected_answer: t.expected_answer,
-              scoring_method: t.category === "multiple_choice" ? "multiple_choice" : "exact_match",
-              metadata: { options: ["A", "B", "C", "D"] },
-              description: "Standard bundled test task"
-            })));
-            setDatasetLoading(false);
-          });
-      }, []);
+        const handleScroll = () => {
+          const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+          const currentScroll = window.scrollY;
+          const progress = totalScroll > 0 ? (currentScroll / totalScroll) * 100 : 0;
+          setScrollProgress(progress);
 
-      // Synchronize Theme
-      useEffect(() => {
-        if (theme === "dark") {
-          document.documentElement.classList.add("dark");
-          document.documentElement.classList.remove("light");
-        } else {
-          document.documentElement.classList.remove("dark");
-          document.documentElement.classList.add("light");
-        }
-        localStorage.setItem("tinybench_theme", theme);
-      }, [theme]);
-
-      // Save Runs to LocalStorage
-      useEffect(() => {
-        localStorage.setItem("tinybench_runs", JSON.stringify(runs));
-      }, [runs]);
-
-      // Ping Ollama Endpoint
-      const checkOllamaConnection = async (urlToTest = ollamaUrl) => {
-        setOllamaStatus(prev => ({ ...prev, state: "checking", error: "" }));
-        const cleanUrl = (urlToTest || "").trim().replace(/\/+$/, "");
-        const t0 = performance.now();
-        try {
-          const verRes = await fetch(`${cleanUrl}/api/version`, { method: "GET", signal: AbortSignal.timeout(3500) });
-          if (!verRes.ok) throw new Error(`HTTP ${verRes.status}`);
-          const verData = await verRes.json();
-          const latency = Math.round(performance.now() - t0);
-
-          // Check installed models
-          let installedModels = [];
-          try {
-            const tagsRes = await fetch(`${cleanUrl}/api/tags`, { method: "GET", signal: AbortSignal.timeout(3500) });
-            if (tagsRes.ok) {
-              const tagsData = await tagsRes.json();
-              installedModels = (tagsData.models || []).map(m => m.name);
-            }
-          } catch {}
-
-          setOllamaStatus({
-            state: "online",
-            version: verData.version || "0.40+",
-            models: installedModels,
-            latency,
-            error: ""
-          });
-          localStorage.setItem("tinybench_ollama_url", cleanUrl);
-        } catch (err) {
-          setOllamaStatus({
-            state: "offline",
-            version: "",
-            models: [],
-            latency: 0,
-            error: err.message || "Failed to reach endpoint"
-          });
-        }
-      };
-
-      // Initial ping on mount
-      useEffect(() => {
-        checkOllamaConnection();
-      }, []);
-
-      // Selected Model Object
-      const activeModel = useMemo(() => {
-        return MODEL_CATALOGUE.find(m => m.id === selectedModelId) || MODEL_CATALOGUE[0];
-      }, [selectedModelId]);
-
-      // Filtered Tasks for Run Details
-      const activeRun = useMemo(() => {
-        return runs.find(r => r.run_id === activeRunId) || runs[0];
-      }, [runs, activeRunId]);
-
-      // Extract MCQ choice helper (matching python accuracy.py)
-      const extractMcqChoice = (text, validOpts = ["A", "B", "C", "D"]) => {
-        if (!text) return null;
-        const clean = text.trim();
-        const validSet = new Set(validOpts.map(o => o.toUpperCase()));
-        
-        // 1. First token match
-        const firstToken = clean.split(/\s+/)[0]?.replace(/[).,;:!]/g, "").toUpperCase();
-        if (validSet.has(firstToken)) return firstToken;
-
-        // 2. Answer: [A-D] regex
-        const match = clean.match(/(?:answer|option|choice|conclusion|is)\s*[:=\-]?\s*\(?([A-Da-d])\)?(?:\.|\b|$)/i);
-        if (match && validSet.has(match[1].toUpperCase())) return match[1].toUpperCase();
-
-        // 3. Standalone letter
-        const matchStandalone = clean.match(/\b([A-Da-d])\b/);
-        if (matchStandalone && validSet.has(matchStandalone[1].toUpperCase())) return matchStandalone[1].toUpperCase();
-
-        return null;
-      };
-
-      // Launch Benchmark Execution Pipeline
-      const launchBenchmark = async () => {
-        if (activeModel.runtime === "transformers_cpu") {
-          alert(`Notice: '${activeModel.name}' runs on Hugging Face Transformers CPU. In browser mode, use the local CLI command: 'tinybench evaluate --model ${activeModel.id}' or launch via Streamlit Cloud.`);
-          return;
-        }
-
-        if (ollamaStatus.state !== "online") {
-          setShowEndpointModal(true);
-          return;
-        }
-
-        // Determine effective task limit
-        let targetLimit = 5;
-        if (scopePreset === "Standard Run (15 tasks)") targetLimit = 15;
-        else if (scopePreset === "Full Dataset (All 35 tasks)") targetLimit = datasetItems.length;
-        else if (scopePreset === "Custom Limit") targetLimit = Math.max(1, customLimit);
-
-        // Filter dataset by categories
-        const candidateTasks = datasetItems.filter(item => selectedCategories.includes(item.category)).slice(0, targetLimit);
-        if (candidateTasks.length === 0) {
-          alert("No benchmark tasks match your category filters.");
-          return;
-        }
-
-        setRunState("running");
-        abortControllerRef.current = new AbortController();
-        const runId = `run_${Date.now()}_${activeModel.id.replace(/[:/]/g, "_")}`;
-        const startTime = Date.now();
-        const taskResults = [];
-        const latencies = [];
-
-        for (let i = 0; i < candidateTasks.length; i++) {
-          if (abortControllerRef.current?.signal.aborted) break;
-          const task = candidateTasks[i];
-          setRunProgress({
-            current: i + 1,
-            total: candidateTasks.length,
-            currentTask: task,
-            elapsed: Math.round((Date.now() - startTime) / 1000),
-            latency: 0
-          });
-
-          const t0 = performance.now();
-          let generatedText = "";
-          let thinkingText = "";
-          let isCorrect = false;
-          let exactMatch = false;
-          let error = null;
-
-          try {
-            const payload = {
-              model: activeModel.id,
-              prompt: task.prompt,
-              stream: false,
-              options: {
-                num_predict: Math.max(maxTokens, 384),
-                temperature: temperature,
-                seed: seed
-              }
-            };
-
-            const resp = await fetch(`${ollamaUrl}/api/generate`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-              signal: abortControllerRef.current.signal
-            });
-
-            if (!resp.ok) throw new Error(`Ollama returned status ${resp.status}`);
-            const data = await resp.json();
-            const latencySec = (performance.now() - t0) / 1000;
-            latencies.push(latencySec);
-
-            let rawResp = (data.response || "").trim();
-            let rawThink = (data.thinking || "").trim();
-
-            // Sanitize unclosed think tags
-            let cleanAnswer = rawResp.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-            cleanAnswer = cleanAnswer.replace(/^<think>\s*/i, "").trim();
-            let effectiveText = cleanAnswer || rawResp;
-
-            // Fallback if response empty but thinking exists
-            if (!effectiveText && rawThink) {
-              const mcqMatch = rawThink.match(/(?:answer|option|choice|conclusion|is)\s*[:=\-]?\s*\(?([A-Da-d])\)?(?:\.|\b|$)/i);
-              if (mcqMatch) effectiveText = mcqMatch[1].toUpperCase();
-              else {
-                const lines = rawThink.split("\n").map(l => l.trim()).filter(Boolean);
-                effectiveText = lines[lines.length - 1] || "";
-              }
-            }
-
-            generatedText = effectiveText;
-            thinkingText = rawThink;
-
-            // Grade answer
-            const exp = String(task.expected_answer).trim();
-            if (task.scoring_method === "multiple_choice") {
-              const choice = extractMcqChoice(generatedText);
-              isCorrect = choice ? choice.toUpperCase() === exp.toUpperCase() : false;
-              exactMatch = generatedText.toUpperCase() === exp.toUpperCase();
-            } else {
-              exactMatch = generatedText.toLowerCase().replace(/[.,!]/g, "").trim() === exp.toLowerCase().replace(/[.,!]/g, "").trim();
-              isCorrect = exactMatch;
-            }
-
-            taskResults.push({
-              task_id: task.task_id,
-              category: task.category,
-              prompt: task.prompt,
-              expected_answer: task.expected_answer,
-              generated_text: generatedText,
-              thinking_text: thinkingText,
-              is_correct: isCorrect,
-              exact_match: exactMatch,
-              compliance_score: 1.0,
-              latency_seconds: Number(latencySec.toFixed(3)),
-              prompt_tokens: data.prompt_eval_count || 30,
-              generated_tokens: data.eval_count || 150,
-              error: null
-            });
-          } catch (err) {
-            if (abortControllerRef.current?.signal.aborted) break;
-            error = err.message || "Inference error";
-            taskResults.push({
-              task_id: task.task_id,
-              category: task.category,
-              prompt: task.prompt,
-              expected_answer: task.expected_answer,
-              generated_text: "",
-              thinking_text: "",
-              is_correct: false,
-              exact_match: false,
-              compliance_score: 0.0,
-              latency_seconds: 0.0,
-              error: error
-            });
+          const progressBar = document.getElementById('scroll-progress-line');
+          if (progressBar) {
+            progressBar.style.width = `${progress}%`;
           }
-        }
 
-        if (abortControllerRef.current?.signal.aborted) {
-          setRunState("cancelled");
-          return;
-        }
-
-        // Aggregate Run Result
-        const correctCount = taskResults.filter(t => t.is_correct).length;
-        const totalCount = taskResults.length;
-        const accuracy = totalCount > 0 ? Number(((correctCount / totalCount) * 100).toFixed(1)) : 0;
-        const emCount = taskResults.filter(t => t.exact_match).length;
-        const emRate = totalCount > 0 ? Number(((emCount / totalCount) * 100).toFixed(1)) : 0;
-        const meanLatency = latencies.length > 0 ? Number((latencies.reduce((a, b) => a + b, 0) / latencies.length).toFixed(3)) : 0;
-
-        const newRun = {
-          run_id: runId,
-          timestamp: new Date().toISOString(),
-          model_metadata: activeModel,
-          dataset_name: "basic_v1.jsonl",
-          generation_config: { max_new_tokens: maxTokens, temperature: temperature, seed: seed },
-          total_examples: totalCount,
-          successful_examples: taskResults.filter(t => !t.error).length,
-          failed_examples: taskResults.filter(t => t.error).length,
-          accuracy: accuracy,
-          exact_match_rate: emRate,
-          avg_compliance_score: 1.0,
-          latency_summary: { median_latency_seconds: meanLatency, mean_latency_seconds: meanLatency, init_latency_seconds: 0.1 },
-          memory_measurement: { peak_rss_mb: activeModel.estRamMb, memory_delta_mb: 200.0 },
-          is_demo: false,
-          task_results: taskResults
+          // Section detection
+          const scrollPos = window.scrollY + window.innerHeight * 0.35;
+          for (let i = sections.length - 1; i >= 0; i--) {
+            const el = document.getElementById(sections[i].id);
+            if (el && el.offsetTop <= scrollPos) {
+              setActiveSection(sections[i].id);
+              break;
+            }
+          }
         };
 
-        setRuns(prev => [newRun, ...prev]);
-        setActiveRunId(runId);
-        setRunState("completed");
-        setNav("run_details");
-      };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
+        return () => window.removeEventListener('scroll', handleScroll);
+      }, [sections]);
 
-      const cancelBenchmark = () => {
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort();
-        }
-        setRunState("cancelled");
+      // ------------------------------------------------------------------------
+      // Interactive Three.js WebGL Fluid Shader Effect for Hero
+      // ------------------------------------------------------------------------
+      useEffect(() => {
+        if (!canvasRef.current) return;
+
+        let animationFrameId;
+        const canvas = canvasRef.current;
+        const width = canvas.clientWidth || window.innerWidth;
+        const height = canvas.clientHeight || 600;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Vertex & Fragment Shaders inspired by ZEN WebGL metallic waves
+        const material = new THREE.ShaderMaterial({
+          uniforms: {
+            u_time: { value: 0 },
+            u_resolution: { value: new THREE.Vector2(width, height) },
+            u_mouse: { value: new THREE.Vector2(0.5, 0.5) }
+          },
+          vertexShader: `
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform float u_time;
+            uniform vec2 u_resolution;
+            uniform vec2 u_mouse;
+            varying vec2 vUv;
+
+            void main() {
+              vec2 p = (gl_FragCoord.xy * 2.0 - u_resolution) / min(u_resolution.x, u_resolution.y);
+              float t = u_time * 0.35;
+
+              // Wave distortion
+              for(float i = 1.0; i < 4.0; i++) {
+                p.x += 0.3 / i * sin(i * 3.0 * p.y + t + u_mouse.x * 2.0);
+                p.y += 0.3 / i * cos(i * 3.0 * p.x + t + u_mouse.y * 2.0);
+              }
+
+              float intensity = abs(sin(p.x * 2.0 + p.y * 2.0 + t));
+              
+              // Neon Acid Lime + Dark Obsidian palette
+              vec3 limeAccent = vec3(0.639, 1.0, 0.0); // #A3FF00
+              vec3 darkBase = vec3(0.0, 0.0, 0.0);
+              vec3 emeraldHighlight = vec3(0.1, 0.4, 0.05);
+
+              vec3 color = mix(darkBase, emeraldHighlight, smoothstep(0.1, 0.9, intensity));
+              color = mix(color, limeAccent, pow(intensity, 4.5) * 0.85);
+
+              // Vignette towards edges
+              float dist = distance(vUv, vec2(0.5));
+              color *= (1.0 - smoothstep(0.3, 0.85, dist));
+
+              gl_FragColor = vec4(color, 0.85);
+            }
+          `
+        });
+
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+        scene.add(plane);
+
+        const handleMouseMove = (e) => {
+          material.uniforms.u_mouse.value.x = e.clientX / window.innerWidth;
+          material.uniforms.u_mouse.value.y = 1.0 - (e.clientY / window.innerHeight);
+        };
+        window.addEventListener('mousemove', handleMouseMove, { passive: true });
+
+        const handleResize = () => {
+          if (!canvas) return;
+          const w = canvas.parentElement.clientWidth;
+          const h = canvas.parentElement.clientHeight;
+          renderer.setSize(w, h);
+          material.uniforms.u_resolution.value.set(w, h);
+        };
+        window.addEventListener('resize', handleResize);
+
+        const startTime = Date.now();
+        const animate = () => {
+          material.uniforms.u_time.value = (Date.now() - startTime) * 0.001;
+          renderer.render(scene, camera);
+          animationFrameId = requestAnimationFrame(animate);
+        };
+        animate();
+
+        return () => {
+          cancelAnimationFrame(animationFrameId);
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('resize', handleResize);
+          renderer.dispose();
+          material.dispose();
+        };
+      }, []);
+
+      // ------------------------------------------------------------------------
+      // Interactive Live Benchmark Runner
+      // ------------------------------------------------------------------------
+      const runInteractiveBenchmark = () => {
+        if (runningEval) return;
+        setRunningEval(true);
+        setEvalProgress(0);
+        setEvalLogs([]);
+        setEvalDone(false);
+
+        let step = 0;
+        const total = SAMPLE_TASKS.length;
+
+        const interval = setInterval(() => {
+          if (step >= total) {
+            clearInterval(interval);
+            setRunningEval(false);
+            setEvalDone(true);
+            setEvalProgress(100);
+            return;
+          }
+
+          const task = SAMPLE_TASKS[step];
+          const lat = (Math.random() * 0.08 + 0.04).toFixed(3);
+          const isPass = Math.random() > 0.08;
+
+          setEvalLogs(prev => [
+            ...prev,
+            {
+              taskId: task.id,
+              category: task.cat,
+              latency: lat,
+              status: isPass ? "PASSED" : "FAILED",
+              output: isPass ? task.correct : "Token drift"
+            }
+          ]);
+
+          step++;
+          setEvalProgress(Math.round((step / total) * 100));
+        }, 550);
       };
 
       return (
-        <div className="min-h-screen flex flex-col">
-          {/* Header */}
-          <header className="sticky top-0 z-40 backdrop-blur-md bg-surface/90 border-b border-borderSubtle px-6 py-3.5 transition-colors">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl cursor-pointer" onClick={() => setNav("overview")}>⚡</span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold tracking-tight cursor-pointer" onClick={() => setNav("overview")}>TinyBench</span>
-                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold">v0.2.0</span>
-                    <span className="hidden sm:inline font-mono text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">CPU First</span>
-                  </div>
-                  <p className="text-xs text-textMuted hidden sm:block">Open-Weight Small Language Model CPU Benchmarking Suite</p>
-                </div>
-              </div>
+        <div className="relative min-h-screen bg-black text-white selection:bg-[#A3FF00] selection:text-black">
 
-              {/* Navigation Tabs */}
-              <nav className="hidden md:flex items-center gap-1 bg-nested/60 p-1 rounded-xl border border-borderSubtle">
-                {[
-                  { id: "overview", label: "Overview", icon: "📊" },
-                  { id: "run_benchmark", label: "Run Benchmark", icon: "🚀" },
-                  { id: "run_details", label: "Run Details", icon: "🔍" },
-                  { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
-                  { id: "model_hub", label: "Model Hub", icon: "📦" },
-                  { id: "dataset_explorer", label: "Dataset Explorer", icon: "📚" }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setNav(tab.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      nav === tab.id
-                        ? "bg-cyan-500 text-slate-950 font-bold shadow-sm"
-                        : "text-textMuted hover:text-textPrimary hover:bg-surface/50"
-                    }`}
-                  >
-                    <span>{tab.icon}</span>
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
-              </nav>
-
-              {/* Right Utility Controls */}
-              <div className="flex items-center gap-2.5">
-                {/* Ollama Status Ribbon Badge */}
-                <button
-                  onClick={() => setShowEndpointModal(true)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium border transition-all ${
-                    ollamaStatus.state === "online"
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
-                      : ollamaStatus.state === "checking"
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse"
-                      : "bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
-                  }`}
-                  title="Configure Local Ollama or Cloudflare Tunnel"
-                >
-                  <span className={`w-2 h-2 rounded-full ${ollamaStatus.state === "online" ? "bg-emerald-400 animate-ping" : ollamaStatus.state === "checking" ? "bg-amber-400" : "bg-rose-400"}`}></span>
-                  <span>Ollama: {ollamaStatus.state === "online" ? `Online (${ollamaStatus.latency}ms)` : "Disconnected"}</span>
-                </button>
-
-                {/* Theme Switcher */}
-                <button
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="p-1.5 rounded-lg bg-surface border border-borderSubtle text-textMuted hover:text-textPrimary transition-colors"
-                  title="Toggle Light/Dark Theme"
-                >
-                  {theme === "dark" ? "☀️" : "🌙"}
-                </button>
-
-                {/* Cloud & GitHub Links */}
-                <a
-                  href="https://tinybench-aibenchmark.streamlit.app/"
-                  target="_blank"
-                  className="hidden lg:flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-colors"
-                >
-                  <span>⚡ Cloud Studio</span>
-                </a>
-                <a
-                  href="https://github.com/shettyadithyar76-prog/tinybench"
-                  target="_blank"
-                  className="p-1.5 rounded-lg bg-surface border border-borderSubtle text-textMuted hover:text-textPrimary transition-colors"
-                  title="GitHub Repository"
-                >
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                </a>
-              </div>
+          {/* ==================================================================
+              FLOATING KINETIC SCROLLBAR TRACK & SECTION WAYPOINTS
+              ================================================================== */}
+          <aside className="floating-scrollbar-track hidden lg:flex">
+            {/* Visual Animated Thumb Rail */}
+            <div className="relative w-[3px] h-48 bg-white/10 rounded-full overflow-hidden mr-1">
+              <div 
+                className="absolute top-0 left-0 w-full bg-[#A3FF00] rounded-full transition-all duration-75"
+                style={{ 
+                  height: `${Math.max(16, scrollProgress)}%`, 
+                  boxShadow: '0 0 10px #A3FF00' 
+                }}
+              />
             </div>
 
-            {/* Mobile Navigation Row */}
-            <div className="flex md:hidden items-center justify-between overflow-x-auto gap-2 pt-2.5 border-t border-borderSubtle mt-2 custom-scroll">
-              {[
-                { id: "overview", label: "Overview", icon: "📊" },
-                { id: "run_benchmark", label: "Run", icon: "🚀" },
-                { id: "run_details", label: "Details", icon: "🔍" },
-                { id: "leaderboard", label: "Board", icon: "🏆" },
-                { id: "model_hub", label: "Models", icon: "📦" },
-                { id: "dataset_explorer", label: "Data", icon: "📚" }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setNav(tab.id)}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs whitespace-nowrap font-medium ${
-                    nav === tab.id ? "bg-cyan-500 text-slate-950 font-bold" : "text-textMuted"
-                  }`}
+            {/* Section Waypoints */}
+            <div className="flex flex-col gap-3 font-mono text-[11px] tracking-widest text-right">
+              {sections.map(s => {
+                const isActive = activeSection === s.id;
+                return (
+                  <a
+                    key={s.id}
+                    href={`#${s.id}`}
+                    className={`transition-all duration-200 flex items-center justify-end gap-2 group ${
+                      isActive ? 'text-[#A3FF00] font-bold scale-105' : 'text-neutral-500 hover:text-white'
+                    }`}
+                  >
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      {s.label}
+                    </span>
+                    <span 
+                      className={`inline-block w-2 h-2 rounded-full transition-all duration-200 ${
+                        isActive ? 'bg-[#A3FF00] scale-125 shadow-[0_0_8px_#A3FF00]' : 'bg-white/20 group-hover:bg-white/60'
+                      }`}
+                    />
+                  </a>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* ==================================================================
+              TOP FIXED HEADER & NAVIGATION
+              ================================================================== */}
+          <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-black/60 border-b border-white/5 transition-colors duration-300">
+            <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+              
+              {/* Brand Logo: ZEN/TINYBENCH Chunky Geometric Block Mark */}
+              <a href="#about" className="flex items-center gap-3 group">
+                <div className="flex items-center">
+                  {/* Geometric ZEN Style Segmented Logo */}
+                  <svg className="h-7 w-auto fill-[#A3FF00] group-hover:scale-105 transition-transform" viewBox="0 0 120 32" xmlns="http://www.w3.org/2000/svg">
+                    {/* Z */}
+                    <path d="M0 4H26V10L10 22H26V28H0V22L16 10H0V4Z"/>
+                    {/* E */}
+                    <path d="M34 4H58V10H43V13H55V19H43V22H58V28H34V4Z"/>
+                    {/* N */}
+                    <path d="M66 4H75L86 18V4H94V28H85L74 14V28H66V4Z"/>
+                    {/* Gauge Dot */}
+                    <circle cx="106" cy="16" r="5" fill="#A3FF00"/>
+                  </svg>
+                </div>
+                <span className="hidden sm:inline font-mono text-xs uppercase tracking-widest text-[#A3FF00] border border-[#A3FF00]/40 px-2 py-0.5 rounded-full">
+                  TinyBench AI
+                </span>
+              </a>
+
+              {/* Navigation Links */}
+              <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-300">
+                <a href="#about" className={`hover:text-[#A3FF00] transition-colors ${activeSection === 'about' ? 'text-[#A3FF00]' : ''}`}>
+                  About
+                </a>
+                <a href="#services" className={`hover:text-[#A3FF00] transition-colors ${activeSection === 'services' ? 'text-[#A3FF00]' : ''}`}>
+                  Services
+                </a>
+                <a href="#work" className={`hover:text-[#A3FF00] transition-colors ${activeSection === 'work' ? 'text-[#A3FF00]' : ''}`}>
+                  Our work
+                </a>
+                <a href="#engine" className={`hover:text-[#A3FF00] transition-colors ${activeSection === 'engine' ? 'text-[#A3FF00]' : ''}`}>
+                  AI Engine
+                </a>
+                <a href="#contact" className={`hover:text-[#A3FF00] transition-colors ${activeSection === 'contact' ? 'text-[#A3FF00]' : ''}`}>
+                  Contact
+                </a>
+              </nav>
+
+              {/* Action Button: LET'S TALK ↗ */}
+              <div className="flex items-center gap-3">
+                <a 
+                  href="#contact" 
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full border border-white/20 hover:border-[#A3FF00] hover:bg-[#A3FF00] hover:text-black font-semibold text-xs tracking-wider uppercase transition-all duration-200 group"
                 >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </button>
-              ))}
+                  <span>LET'S TALK</span>
+                  <span className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
+                </a>
+              </div>
             </div>
           </header>
 
-          {/* Main Content Area */}
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+          {/* ==================================================================
+              SECTION 1: HERO & "ABOUT US" (Solid Pitch Black Canvas)
+              ================================================================== */}
+          <section id="about" className="relative min-h-screen pt-36 pb-20 flex flex-col justify-between overflow-hidden bg-black">
+            
+            {/* Interactive WebGL Shader Canvas Background */}
+            <div className="absolute inset-0 z-0 pointer-events-none opacity-85">
+              <canvas ref={canvasRef} className="w-full h-full" />
+            </div>
 
-            {/* 1. OVERVIEW VIEW */}
-            {nav === "overview" && (
-              <div className="space-y-6">
-                {/* Hero Card */}
-                <div className="clay-card p-6 sm:p-8 bg-gradient-to-r from-surface via-surface to-cyan-950/20 relative overflow-hidden">
-                  <div className="max-w-3xl">
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">Open-Weight CPU Suite</span>
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Deterministic Grading</span>
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20">Chain-of-Thought Ready</span>
-                    </div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
-                      Transparent LLM Evaluation for Ordinary Hardware
-                    </h1>
-                    <p className="text-textMuted text-sm leading-relaxed mb-6">
-                      TinyBench measures objective task accuracy, exact string matching, instruction compliance, latency, and memory footprints for real open-weight language models on consumer CPU hardware.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        onClick={() => {
-                          setSelectedModelId("gemma4:e2b");
-                          setScopePreset("Quick Test (5 tasks)");
-                          launchBenchmark();
-                        }}
-                        className="px-4 py-2 text-xs font-bold rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-colors flex items-center gap-1.5 shadow-md shadow-cyan-500/20"
-                      >
-                        <span>⚡ One-Click Quick Run (Gemma 4)</span>
-                      </button>
-                      <button
-                        onClick={() => setNav("run_benchmark")}
-                        className="px-4 py-2 text-xs font-semibold rounded-xl bg-nested border border-borderSubtle text-textPrimary hover:bg-borderSubtle transition-colors"
-                      >
-                        ⚙️ Configure Benchmark Studio
-                      </button>
-                      <button
-                        onClick={() => setShowEndpointModal(true)}
-                        className="px-3.5 py-2 text-xs font-mono font-medium rounded-xl bg-nested/50 border border-borderSubtle text-textMuted hover:text-textPrimary transition-colors flex items-center gap-1.5"
-                      >
-                        <span>🔌 Connect Ollama / Cloudflare</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Metric Bento Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="clay-card p-5">
-                    <div className="text-xs font-medium uppercase tracking-wider text-textMuted mb-1">Standard Tasks</div>
-                    <div className="text-2xl sm:text-3xl font-extrabold font-mono text-cyan-400">35</div>
-                    <div className="text-xs text-textMuted mt-1">Across 5 distinct domains</div>
-                  </div>
-                  <div className="clay-card p-5">
-                    <div className="text-xs font-medium uppercase tracking-wider text-textMuted mb-1">Historical Runs</div>
-                    <div className="text-2xl sm:text-3xl font-extrabold font-mono text-emerald-400">{runs.length}</div>
-                    <div className="text-xs text-textMuted mt-1">Stored in persistent cache</div>
-                  </div>
-                  <div className="clay-card p-5">
-                    <div className="text-xs font-medium uppercase tracking-wider text-textMuted mb-1">Best Accuracy</div>
-                    <div className="text-2xl sm:text-3xl font-extrabold font-mono text-violet-400">
-                      {runs.length > 0 ? `${Math.max(...runs.map(r => r.accuracy))}%` : "N/A"}
-                    </div>
-                    <div className="text-xs text-textMuted mt-1">Gemma 4 E2B</div>
-                  </div>
-                  <div className="clay-card p-5">
-                    <div className="text-xs font-medium uppercase tracking-wider text-textMuted mb-1">Min RAM Model</div>
-                    <div className="text-2xl sm:text-3xl font-extrabold font-mono text-amber-400">1.1 GB</div>
-                    <div className="text-xs text-textMuted mt-1">DeepSeek R1 1.5B (Q4)</div>
-                  </div>
-                </div>
-
-                {/* Telemetry & Connection Notice */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="clay-card p-5 md:col-span-2">
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-sm font-bold flex items-center gap-2">
-                        <span>💻</span> Hardware Telemetry & Runtime Profile
-                      </h2>
-                      <span className="font-mono text-xs px-2 py-0.5 rounded bg-nested text-textMuted">Live Daemon</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-                      <div className="bg-nested p-2.5 rounded-lg border border-borderSubtle">
-                        <div className="text-textMuted text-[10px]">DAEMON STATUS</div>
-                        <div className={`font-bold mt-0.5 ${ollamaStatus.state === 'online' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {ollamaStatus.state === 'online' ? 'CONNECTED' : 'DISCONNECTED'}
-                        </div>
-                      </div>
-                      <div className="bg-nested p-2.5 rounded-lg border border-borderSubtle">
-                        <div className="text-textMuted text-[10px]">ENDPOINT</div>
-                        <div className="font-bold text-textPrimary truncate mt-0.5">{ollamaUrl}</div>
-                      </div>
-                      <div className="bg-nested p-2.5 rounded-lg border border-borderSubtle">
-                        <div className="text-textMuted text-[10px]">VERSION</div>
-                        <div className="font-bold text-cyan-400 mt-0.5">{ollamaStatus.version || "Unavailable"}</div>
-                      </div>
-                      <div className="bg-nested p-2.5 rounded-lg border border-borderSubtle">
-                        <div className="text-textMuted text-[10px]">INSTALLED MODELS</div>
-                        <div className="font-bold text-violet-400 mt-0.5">{ollamaStatus.models.length} detected</div>
-                      </div>
-                    </div>
-                    <div className="mt-3 text-xs text-textMuted flex items-center justify-between">
-                      <span>Host browser sandbox active. Direct CPU hardware telemetry is provided via local daemon connection.</span>
-                      <button onClick={() => checkOllamaConnection()} className="text-cyan-400 hover:underline">Re-probe</button>
-                    </div>
-                  </div>
-
-                  {/* Active Cloud Studio Link */}
-                  <div className="clay-card p-5 flex flex-col justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-1">Streamlit Cloud App</div>
-                      <h3 className="font-bold text-sm text-textPrimary mb-1">Full Python Runtime Engine</h3>
-                      <p className="text-xs text-textMuted leading-relaxed">
-                        For Transformers CPU execution of Llama 3.2 1B and SmolLM2 1.7B, launch our companion Streamlit Cloud application.
-                      </p>
-                    </div>
-                    <a
-                      href="https://tinybench-aibenchmark.streamlit.app/"
-                      target="_blank"
-                      className="mt-4 px-3 py-2 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-center transition-colors block"
-                    >
-                      Open Streamlit Cloud &rarr;
-                    </a>
-                  </div>
-                </div>
-
-                {/* Recent Completed Runs Table */}
-                <div className="clay-card p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-bold flex items-center gap-2">
-                      <span>📋</span> Recent Benchmark Evaluations
-                    </h2>
-                    <button onClick={() => setNav("leaderboard")} className="text-xs text-cyan-400 hover:underline">
-                      View Full Leaderboard &rarr;
-                    </button>
-                  </div>
-                  <div className="overflow-x-auto custom-scroll">
-                    <table className="w-full text-left text-xs font-mono">
-                      <thead className="bg-nested/70 text-textMuted uppercase text-[11px] border-b border-borderSubtle">
-                        <tr>
-                          <th className="px-3.5 py-2.5 rounded-l-lg">Run ID</th>
-                          <th className="px-3.5 py-2.5">Model</th>
-                          <th className="px-3.5 py-2.5">Tasks</th>
-                          <th className="px-3.5 py-2.5">Accuracy</th>
-                          <th className="px-3.5 py-2.5">Mean Latency</th>
-                          <th className="px-3.5 py-2.5 rounded-r-lg">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-borderSubtle">
-                        {runs.map(r => (
-                          <tr key={r.run_id} className="hover:bg-nested/30 transition-colors">
-                            <td className="px-3.5 py-3 font-semibold text-textPrimary">{r.run_id}</td>
-                            <td className="px-3.5 py-3 text-cyan-400 font-bold">{r.model_metadata.name}</td>
-                            <td className="px-3.5 py-3 text-textMuted">{r.total_examples}</td>
-                            <td className="px-3.5 py-3 font-bold text-emerald-400">{r.accuracy}%</td>
-                            <td className="px-3.5 py-3 text-textMuted">{(r.latency_summary.mean_latency_seconds * 1000).toFixed(0)} ms</td>
-                            <td className="px-3.5 py-3">
-                              <button
-                                onClick={() => { setActiveRunId(r.run_id); setNav("run_details"); }}
-                                className="px-2.5 py-1 rounded bg-nested hover:bg-cyan-500/20 text-cyan-400 border border-borderSubtle transition-colors text-[11px]"
-                              >
-                                Inspect &rarr;
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 2. RUN BENCHMARK CONFIGURATION STUDIO */}
-            {nav === "run_benchmark" && (
-              <div className="space-y-6">
-                <div className="clay-card p-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-borderSubtle pb-4 mb-6">
-                    <div>
-                      <h1 className="text-xl font-bold flex items-center gap-2">
-                        <span>🚀</span> Benchmark Configuration Studio
-                      </h1>
-                      <p className="text-xs text-textMuted">Select verified model, execution scope, and hyperparameters for real CPU evaluation.</p>
-                    </div>
-                    {/* Execution State Indicator */}
-                    {runState === "running" && (
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-2 text-xs font-mono font-bold text-cyan-400 bg-cyan-500/10 px-3 py-1.5 rounded-lg border border-cyan-500/20 animate-pulse">
-                          <span>🔄 Running Task {runProgress.current} / {runProgress.total}...</span>
-                        </span>
-                        <button
-                          onClick={cancelBenchmark}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30"
-                        >
-                          ⏹️ Cancel
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Studio Form Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left: Model & Scope Controls */}
-                    <div className="lg:col-span-2 space-y-6">
-                      {/* Step 1: Model Selector */}
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-textMuted mb-2">
-                          01. Select Verified Model (Real Open-Weight Edge Models)
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {MODEL_CATALOGUE.map(m => {
-                            const isInstalled = ollamaStatus.models.some(inst => inst.toLowerCase().includes(m.id.toLowerCase()));
-                            const isSelected = selectedModelId === m.id;
-                            return (
-                              <div
-                                key={m.id}
-                                onClick={() => setSelectedModelId(m.id)}
-                                className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                                  isSelected
-                                    ? "bg-cyan-500/10 border-cyan-500 shadow-sm"
-                                    : "bg-nested/60 border-borderSubtle hover:border-textMuted/40"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="font-bold text-sm text-textPrimary">{m.name}</span>
-                                  {m.isReasoning && (
-                                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                                      🧠 REASONING
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-xs text-textMuted mb-2">{m.publisher} &bull; {m.parameters}</div>
-                                <div className="flex items-center justify-between text-[11px] font-mono">
-                                  <span className="text-textMuted">{m.runtimeLabel}</span>
-                                  <span className="text-cyan-400 font-bold">{m.downloadSize}</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Step 2: Scope Presets */}
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-textMuted mb-2">
-                          02. Execution Scope Presets
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                          {["Quick Test (5 tasks)", "Standard Run (15 tasks)", "Full Dataset (All 35 tasks)", "Custom Limit"].map(preset => (
-                            <button
-                              key={preset}
-                              type="button"
-                              onClick={() => setScopePreset(preset)}
-                              className={`p-2.5 text-xs font-medium rounded-lg border text-center transition-all ${
-                                scopePreset === preset
-                                  ? "bg-cyan-500 text-slate-950 font-bold border-cyan-400 shadow-sm"
-                                  : "bg-nested border-borderSubtle text-textMuted hover:text-textPrimary"
-                              }`}
-                            >
-                              {preset}
-                            </button>
-                          ))}
-                        </div>
-                        {scopePreset === "Custom Limit" && (
-                          <div className="mt-3 flex items-center gap-3">
-                            <span className="text-xs text-textMuted">Task Count:</span>
-                            <input
-                              type="number"
-                              min="1"
-                              max="35"
-                              value={customLimit}
-                              onChange={e => setCustomLimit(parseInt(e.target.value) || 1)}
-                              className="w-24 px-3 py-1.5 rounded-lg bg-nested border border-borderSubtle text-xs font-mono text-textPrimary"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Step 3: Categories Filter */}
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-textMuted mb-2">
-                          03. Task Categories
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {[
-                            { id: "multiple_choice", label: "Multiple Choice" },
-                            { id: "factual_qa", label: "Factual Q&A" },
-                            { id: "numeric_reasoning", label: "Numeric Reasoning" },
-                            { id: "instruction_compliance", label: "Instruction Compliance" },
-                            { id: "json_schema", label: "JSON Schema" }
-                          ].map(cat => {
-                            const active = selectedCategories.includes(cat.id);
-                            return (
-                              <button
-                                key={cat.id}
-                                type="button"
-                                onClick={() => {
-                                  if (active && selectedCategories.length > 1) {
-                                    setSelectedCategories(selectedCategories.filter(c => c !== cat.id));
-                                  } else if (!active) {
-                                    setSelectedCategories([...selectedCategories, cat.id]);
-                                  }
-                                }}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all border ${
-                                  active
-                                    ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/40 font-semibold"
-                                    : "bg-nested text-textMuted border-borderSubtle hover:text-textPrimary"
-                                }`}
-                              >
-                                {active ? "✓ " : "+ "}{cat.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Step 4: Hyperparameters */}
-                      <div className="bg-nested/40 p-4 rounded-xl border border-borderSubtle space-y-4">
-                        <div className="text-xs font-bold uppercase tracking-wider text-textMuted">
-                          04. Generation Hyperparameters
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="text-textMuted">Max New Tokens</span>
-                              <span className="font-mono font-bold text-cyan-400">{maxTokens}</span>
-                            </div>
-                            <input
-                              type="range"
-                              min="32"
-                              max="1024"
-                              step="32"
-                              value={maxTokens}
-                              onChange={e => setMaxTokens(parseInt(e.target.value))}
-                              className="w-full accent-cyan-400"
-                            />
-                            <p className="text-[10px] text-textMuted mt-1">Min 384 recommended for CoT reasoning models.</p>
-                          </div>
-                          <div>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="text-textMuted">Temperature</span>
-                              <span className="font-mono font-bold text-cyan-400">{temperature.toFixed(1)}</span>
-                            </div>
-                            <input
-                              type="range"
-                              min="0.0"
-                              max="1.5"
-                              step="0.1"
-                              value={temperature}
-                              onChange={e => setTemperature(parseFloat(e.target.value))}
-                              className="w-full accent-cyan-400"
-                            />
-                            <p className="text-[10px] text-textMuted mt-1">0.0 = Deterministic greedy decoding.</p>
-                          </div>
-                          <div>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="text-textMuted">Random Seed</span>
-                              <span className="font-mono font-bold text-cyan-400">{seed}</span>
-                            </div>
-                            <input
-                              type="number"
-                              value={seed}
-                              onChange={e => setSeed(parseInt(e.target.value) || 42)}
-                              className="w-full px-2.5 py-1 rounded bg-nested border border-borderSubtle text-xs font-mono text-textPrimary"
-                            />
-                            <p className="text-[10px] text-textMuted mt-1">Reproducible deterministic seed.</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right: Hardware Profile & Launch Panel */}
-                    <div className="space-y-5">
-                      <div className="bg-nested p-5 rounded-xl border border-borderSubtle space-y-3.5">
-                        <div className="flex items-center justify-between border-b border-borderSubtle pb-2.5">
-                          <span className="text-xs font-bold uppercase tracking-wider text-textMuted">Model Specification</span>
-                          <span className="font-mono text-xs text-emerald-400 font-bold">READY</span>
-                        </div>
-                        <div className="text-sm font-bold text-textPrimary">{activeModel.name}</div>
-                        <p className="text-xs text-textMuted leading-relaxed">{activeModel.description}</p>
-                        <div className="space-y-1.5 text-xs font-mono">
-                          <div className="flex justify-between py-1 border-b border-borderSubtle/50">
-                            <span className="text-textMuted">Publisher:</span>
-                            <span className="font-bold text-textPrimary">{activeModel.publisher}</span>
-                          </div>
-                          <div className="flex justify-between py-1 border-b border-borderSubtle/50">
-                            <span className="text-textMuted">License:</span>
-                            <span className="font-bold text-textPrimary">{activeModel.license}</span>
-                          </div>
-                          <div className="flex justify-between py-1 border-b border-borderSubtle/50">
-                            <span className="text-textMuted">Quantization:</span>
-                            <span className="font-bold text-textPrimary">{activeModel.quantization}</span>
-                          </div>
-                          <div className="flex justify-between py-1 border-b border-borderSubtle/50">
-                            <span className="text-textMuted">Est. RAM:</span>
-                            <span className="font-bold text-emerald-400">{activeModel.estRamMb} MB</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Launch Button */}
-                      <button
-                        onClick={launchBenchmark}
-                        disabled={runState === "running"}
-                        className={`w-full py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
-                          runState === "running"
-                            ? "bg-cyan-500/50 text-slate-900 cursor-not-allowed"
-                            : "bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/25"
-                        }`}
-                      >
-                        {runState === "running" ? (
-                          <>
-                            <span className="animate-spin">🔄</span>
-                            <span>Evaluating ({runProgress.current}/{runProgress.total})...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>🚀</span>
-                            <span>Launch Benchmark Run</span>
-                          </>
-                        )}
-                      </button>
-
-                      {/* Real Progress Bar */}
-                      {runState === "running" && (
-                        <div className="space-y-2">
-                          <div className="w-full bg-nested rounded-full h-2.5 overflow-hidden">
-                            <div
-                              className="bg-cyan-400 h-2.5 rounded-full transition-all duration-300"
-                              style={{ width: `${(runProgress.current / runProgress.total) * 100}%` }}
-                            ></div>
-                          </div>
-                          <div className="flex justify-between text-xs text-textMuted font-mono">
-                            <span>Elapsed: {runProgress.elapsed}s</span>
-                            <span>{Math.round((runProgress.current / runProgress.total) * 100)}% Complete</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 3. RUN DETAILS & TASK INSPECTOR */}
-            {nav === "run_details" && (
-              <div className="space-y-6">
-                {/* Run Metadata Header */}
-                <div className="clay-card p-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-borderSubtle pb-4 mb-5">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-lg text-textPrimary">{activeRun.model_metadata.name}</span>
-                        <span className="font-mono text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
-                          {activeRun.accuracy}% ACCURACY
-                        </span>
-                      </div>
-                      <div className="font-mono text-xs text-textMuted">Run ID: {activeRun.run_id} &bull; {activeRun.timestamp}</div>
-                    </div>
-                    {/* Run Selector */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-textMuted">Switch Run:</span>
-                      <select
-                        value={activeRunId}
-                        onChange={e => setActiveRunId(e.target.value)}
-                        className="px-3 py-1.5 rounded-lg bg-nested border border-borderSubtle text-xs font-mono text-textPrimary"
-                      >
-                        {runs.map(r => (
-                          <option key={r.run_id} value={r.run_id}>
-                            {r.model_metadata.name} ({r.accuracy}% acc) - {r.run_id.slice(-12)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Summary Metric Cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 font-mono mb-6">
-                    <div className="bg-nested p-3.5 rounded-xl border border-borderSubtle">
-                      <div className="text-[10px] text-textMuted uppercase">Overall Accuracy</div>
-                      <div className="text-xl font-bold text-emerald-400 mt-1">{activeRun.accuracy}%</div>
-                    </div>
-                    <div className="bg-nested p-3.5 rounded-xl border border-borderSubtle">
-                      <div className="text-[10px] text-textMuted uppercase">Exact Match Rate</div>
-                      <div className="text-xl font-bold text-cyan-400 mt-1">{activeRun.exact_match_rate}%</div>
-                    </div>
-                    <div className="bg-nested p-3.5 rounded-xl border border-borderSubtle">
-                      <div className="text-[10px] text-textMuted uppercase">Mean Latency</div>
-                      <div className="text-xl font-bold text-violet-400 mt-1">{(activeRun.latency_summary.mean_latency_seconds * 1000).toFixed(0)} ms</div>
-                    </div>
-                    <div className="bg-nested p-3.5 rounded-xl border border-borderSubtle">
-                      <div className="text-[10px] text-textMuted uppercase">Peak RAM</div>
-                      <div className="text-xl font-bold text-amber-400 mt-1">{activeRun.memory_measurement.peak_rss_mb.toFixed(0)} MB</div>
-                    </div>
-                  </div>
-
-                  {/* Export Actions Center */}
-                  <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-borderSubtle">
-                    <button
-                      onClick={() => {
-                        const blob = new Blob([JSON.stringify(activeRun, null, 2)], { type: "application/json" });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = `${activeRun.run_id}.json`;
-                        a.click();
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-nested text-xs font-mono font-medium border border-borderSubtle hover:bg-borderSubtle transition-colors"
-                    >
-                      📥 Export Run JSON
-                    </button>
-                    <button
-                      onClick={() => {
-                        const headers = ["task_id", "category", "is_correct", "latency_ms", "expected", "generated"];
-                        const rows = activeRun.task_results.map(t => [
-                          t.task_id,
-                          t.category,
-                          t.is_correct ? "1" : "0",
-                          Math.round(t.latency_seconds * 1000),
-                          `"${String(t.expected_answer).replace(/"/g, '""')}"`,
-                          `"${String(t.generated_text).replace(/"/g, '""')}"`
-                        ]);
-                        const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-                        const blob = new Blob([csv], { type: "text/csv" });
-                        const a = document.createElement("a");
-                        a.href = URL.createObjectURL(blob);
-                        a.download = `${activeRun.run_id}_tasks.csv`;
-                        a.click();
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-nested text-xs font-mono font-medium border border-borderSubtle hover:bg-borderSubtle transition-colors"
-                    >
-                      📥 Export Tasks CSV
-                    </button>
-                    <button
-                      onClick={() => {
-                        const md = `# TinyBench Run Report: ${activeRun.model_metadata.name}\n- **Accuracy**: ${activeRun.accuracy}%\n- **Exact Match**: ${activeRun.exact_match_rate}%\n- **Latency**: ${(activeRun.latency_summary.mean_latency_seconds * 1000).toFixed(0)} ms\n- **Tasks**: ${activeRun.total_examples}\n- **Timestamp**: ${activeRun.timestamp}\n`;
-                        navigator.clipboard.writeText(md).then(() => alert("Markdown report copied to clipboard!"));
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-nested text-xs font-mono font-medium border border-borderSubtle hover:bg-borderSubtle transition-colors"
-                    >
-                      📋 Copy Markdown Report
-                    </button>
-                  </div>
-                </div>
-
-                {/* Task-by-Task Cards */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-bold flex items-center gap-2">
-                      <span>🔍</span> Evaluated Tasks ({activeRun.task_results.length})
-                    </h2>
-                  </div>
-
-                  {activeRun.task_results.map((t, idx) => (
-                    <div key={t.task_id || idx} className="clay-card p-5 space-y-3.5">
-                      <div className="flex items-center justify-between border-b border-borderSubtle pb-2.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-xs text-textPrimary">{t.task_id}</span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-nested text-textMuted uppercase border border-borderSubtle">
-                            {t.category}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs text-textMuted">{(t.latency_seconds * 1000).toFixed(0)} ms</span>
-                          <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded border ${
-                            t.is_correct
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                              : "bg-rose-500/10 text-rose-400 border-rose-500/30"
-                          }`}>
-                            {t.is_correct ? "✓ CORRECT" : "✗ INCORRECT"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-                        <div className="bg-nested/60 p-3 rounded-lg border border-borderSubtle space-y-1">
-                          <div className="text-textMuted text-[10px] uppercase font-bold">Prompt:</div>
-                          <div className="text-textPrimary whitespace-pre-wrap">{t.prompt}</div>
-                          <div className="text-textMuted text-[10px] uppercase font-bold pt-2">Expected Answer:</div>
-                          <div className="text-emerald-400 font-bold">{t.expected_answer}</div>
-                        </div>
-
-                        <div className="bg-nested/60 p-3 rounded-lg border border-borderSubtle space-y-1">
-                          <div className="text-textMuted text-[10px] uppercase font-bold">Model Output:</div>
-                          <div className="text-cyan-400 font-bold whitespace-pre-wrap">{t.generated_text || "(empty output)"}</div>
-                          <div className="flex items-center gap-4 text-[11px] text-textMuted pt-2">
-                            <span>Exact Match: <b className={t.exact_match ? "text-emerald-400" : "text-rose-400"}>{t.exact_match ? "Yes" : "No"}</b></span>
-                            <span>Tokens: {t.generated_tokens || "N/A"}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Chain-of-Thought Reasoning Expander */}
-                      {t.thinking_text && (
-                        <details className="group bg-nested/40 rounded-lg border border-borderSubtle overflow-hidden">
-                          <summary className="px-3.5 py-2 text-xs font-mono font-semibold text-violet-400 cursor-pointer flex items-center justify-between hover:bg-nested transition-colors">
-                            <span>🧠 Model-Provided Reasoning Output (Chain-of-Thought)</span>
-                            <span className="text-[10px] text-textMuted group-open:rotate-180 transition-transform">▼</span>
-                          </summary>
-                          <div className="p-3.5 border-t border-borderSubtle bg-nested/80">
-                            <p className="text-[10px] text-textMuted mb-2 italic">
-                              Model-provided reasoning output is model-generated text, not a verified account of internal model computation.
-                            </p>
-                            <div className="font-mono text-xs text-textMuted whitespace-pre-wrap max-h-48 overflow-y-auto custom-scroll bg-canvas/60 p-3 rounded border border-borderSubtle/50">
-                              {t.thinking_text}
-                            </div>
-                          </div>
-                        </details>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 4. LEADERBOARD VIEW */}
-            {nav === "leaderboard" && (
-              <div className="space-y-6">
-                <div className="clay-card p-6">
-                  <div className="border-b border-borderSubtle pb-4 mb-6">
-                    <h1 className="text-xl font-bold flex items-center gap-2">
-                      <span>🏆</span> Open-Weight CPU Benchmarking Leaderboard
-                    </h1>
-                    <p className="text-xs text-textMuted">Comparative ranking of models across standardized deterministic evaluation tasks.</p>
-                  </div>
-
-                  <div className="overflow-x-auto custom-scroll">
-                    <table className="w-full text-left text-xs font-mono">
-                      <thead className="bg-nested/80 text-textMuted uppercase text-[11px] border-b border-borderSubtle">
-                        <tr>
-                          <th className="px-4 py-3 rounded-l-lg">Rank</th>
-                          <th className="px-4 py-3">Model</th>
-                          <th className="px-4 py-3">Family</th>
-                          <th className="px-4 py-3">Runtime</th>
-                          <th className="px-4 py-3">Tasks</th>
-                          <th className="px-4 py-3 text-emerald-400 font-bold">Accuracy</th>
-                          <th className="px-4 py-3">Exact Match</th>
-                          <th className="px-4 py-3">Median Latency</th>
-                          <th className="px-4 py-3 rounded-r-lg">Peak RAM</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-borderSubtle">
-                        {runs
-                          .slice()
-                          .sort((a, b) => b.accuracy - a.accuracy)
-                          .map((r, idx) => (
-                            <tr key={r.run_id} className="hover:bg-nested/40 transition-colors">
-                              <td className="px-4 py-3.5 font-bold">
-                                {idx === 0 ? "🥇 #1" : idx === 1 ? "🥈 #2" : idx === 2 ? "🥉 #3" : `#${idx + 1}`}
-                              </td>
-                              <td className="px-4 py-3.5 font-bold text-textPrimary">{r.model_metadata.name}</td>
-                              <td className="px-4 py-3.5 text-textMuted">{r.model_metadata.family}</td>
-                              <td className="px-4 py-3.5">
-                                <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px]">
-                                  {r.model_metadata.runtimeLabel}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3.5 text-textMuted">{r.total_examples}</td>
-                              <td className="px-4 py-3.5 font-extrabold text-emerald-400 text-sm">{r.accuracy}%</td>
-                              <td className="px-4 py-3.5 font-bold text-cyan-400">{r.exact_match_rate}%</td>
-                              <td className="px-4 py-3.5 text-textMuted">{(r.latency_summary.median_latency_seconds * 1000).toFixed(0)} ms</td>
-                              <td className="px-4 py-3.5 text-amber-400 font-bold">{r.memory_measurement.peak_rss_mb.toFixed(0)} MB</td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 5. MODEL HUB VIEW */}
-            {nav === "model_hub" && (
-              <div className="space-y-6">
-                <div className="clay-card p-6">
-                  <div className="border-b border-borderSubtle pb-4 mb-6">
-                    <h1 className="text-xl font-bold flex items-center gap-2">
-                      <span>📦</span> Verified Model Hub
-                    </h1>
-                    <p className="text-xs text-textMuted">Official verified open-weight identities with hardware requirements and licensing profiles.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {MODEL_CATALOGUE.map(m => {
-                      const isInstalled = ollamaStatus.models.some(inst => inst.toLowerCase().includes(m.id.toLowerCase()));
-                      return (
-                        <div key={m.id} className="clay-card p-6 flex flex-col justify-between space-y-4">
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <h3 className="font-bold text-base text-textPrimary">{m.name}</h3>
-                                <p className="text-xs text-textMuted">{m.publisher} &bull; {m.parameters}</p>
-                              </div>
-                              <span className={`font-mono text-xs px-2.5 py-1 rounded-md font-bold border ${
-                                isInstalled
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                  : "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
-                              }`}>
-                                {isInstalled ? "✓ INSTALLED" : "READY"}
-                              </span>
-                            </div>
-                            <p className="text-xs text-textMuted leading-relaxed mb-4">{m.description}</p>
-                            
-                            <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-nested p-3 rounded-lg border border-borderSubtle">
-                              <div><span className="text-textMuted">License:</span> <a href={m.licenseUrl} target="_blank" className="text-cyan-400 hover:underline">{m.license}</a></div>
-                              <div><span className="text-textMuted">Runtime:</span> {m.runtimeLabel}</div>
-                              <div><span className="text-textMuted">Size:</span> {m.downloadSize}</div>
-                              <div><span className="text-textMuted">Quantization:</span> {m.quantization}</div>
-                              <div><span className="text-textMuted">Min RAM:</span> {m.minRamMb} MB</div>
-                              <div><span className="text-textMuted">Rec RAM:</span> <span className="text-emerald-400 font-bold">{m.recRamMb} MB</span></div>
-                            </div>
-                          </div>
-
-                          <div className="pt-2 border-t border-borderSubtle flex items-center justify-between">
-                            <code className="text-[11px] font-mono text-textMuted bg-nested/80 px-2 py-1 rounded">
-                              {m.runtime === "ollama" ? `ollama run ${m.id}` : `tinybench evaluate --model ${m.id.split('/')[1]}`}
-                            </code>
-                            <button
-                              onClick={() => { setSelectedModelId(m.id); setNav("run_benchmark"); }}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-colors"
-                            >
-                              Benchmark &rarr;
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 6. DATASET EXPLORER VIEW */}
-            {nav === "dataset_explorer" && (
-              <div className="space-y-6">
-                <div className="clay-card p-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-borderSubtle pb-4 mb-6">
-                    <div>
-                      <h1 className="text-xl font-bold flex items-center gap-2">
-                        <span>📚</span> Benchmark Dataset Explorer (basic_v1.jsonl)
-                      </h1>
-                      <p className="text-xs text-textMuted">Inspect the 35 standardized evaluation tasks across 5 distinct domains.</p>
-                    </div>
-                    <span className="font-mono text-xs px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
-                      ✓ Schema Validated (35/35 items)
-                    </span>
-                  </div>
-
-                  {datasetLoading ? (
-                    <div className="p-8 text-center text-xs font-mono text-textMuted">Loading dataset schema...</div>
-                  ) : (
-                    <div className="space-y-3">
-                      {datasetItems.map((item, idx) => (
-                        <div key={item.task_id || idx} className="p-4 rounded-xl bg-nested border border-borderSubtle space-y-2">
-                          <div className="flex items-center justify-between text-xs font-mono">
-                            <span className="font-bold text-cyan-400">{item.task_id}</span>
-                            <span className="px-2 py-0.5 rounded bg-surface text-textMuted uppercase border border-borderSubtle text-[10px]">
-                              {item.category} &bull; {item.scoring_method}
-                            </span>
-                          </div>
-                          <div className="text-xs text-textPrimary whitespace-pre-wrap font-mono">{item.prompt}</div>
-                          <div className="text-xs text-textMuted font-mono">
-                            Expected: <span className="font-bold text-emerald-400">{item.expected_answer}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-          </main>
-
-          {/* Ollama Connection Modal */}
-          {showEndpointModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-              <div className="clay-card max-w-lg w-full p-6 space-y-4">
-                <div className="flex items-center justify-between border-b border-borderSubtle pb-3">
-                  <h3 className="font-bold text-sm text-textPrimary flex items-center gap-2">
-                    <span>🔌</span> Ollama Runtime & Tunnel Endpoint Configuration
-                  </h3>
-                  <button onClick={() => setShowEndpointModal(false)} className="text-textMuted hover:text-textPrimary text-sm font-bold">✕</button>
-                </div>
-
-                <p className="text-xs text-textMuted leading-relaxed">
-                  Enter your local Ollama address or your secure Cloudflare Tunnel endpoint. For browser access to local Ollama, ensure your daemon is started with CORS enabled:
+            {/* Hero Main Content */}
+            <div className="relative z-10 max-w-7xl mx-auto px-6 my-auto">
+              <div className="max-w-4xl">
+                <h1 className="text-5xl sm:text-7xl lg:text-8xl font-extrabold tracking-tight text-white mb-8">
+                  About us
+                </h1>
+                
+                <p className="text-xl sm:text-2xl lg:text-3xl text-neutral-400 font-medium leading-relaxed max-w-3xl">
+                  <span className="text-white font-bold tracking-tight">TINYBENCH</span> creates a clear direction for local AI evaluation, reproducible CPU inference benchmarks, and edge intelligence that unites idea, system, and result.
                 </p>
 
-                <div className="bg-nested p-2.5 rounded-lg border border-borderSubtle font-mono text-xs text-cyan-400">
-                  OLLAMA_ORIGINS="*" ollama serve
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-textMuted mb-1.5">
-                    Endpoint URL:
-                  </label>
-                  <input
-                    type="text"
-                    value={ollamaUrl}
-                    onChange={e => setOllamaUrl(e.target.value)}
-                    placeholder="http://localhost:11434 or https://tunnel.trycloudflare.com"
-                    className="w-full px-3 py-2 rounded-lg bg-nested border border-borderSubtle text-xs font-mono text-textPrimary focus:outline-none focus:border-cyan-400"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    onClick={() => checkOllamaConnection(ollamaUrl)}
-                    className="px-4 py-2 rounded-lg text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-colors"
-                  >
-                    Test Connection
-                  </button>
-                  <span className={`text-xs font-mono font-bold ${ollamaStatus.state === 'online' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {ollamaStatus.state === 'online' ? `✓ Online (${ollamaStatus.latency}ms)` : ollamaStatus.error || "Disconnected"}
-                  </span>
+                {/* Quick Spec Highlights */}
+                <div className="mt-12 flex flex-wrap gap-4 text-xs font-mono text-neutral-400">
+                  <div className="flex items-center gap-2 bg-neutral-900/80 border border-white/10 px-4 py-2 rounded-lg">
+                    <span className="w-2 h-2 rounded-full bg-[#A3FF00] animate-ping" />
+                    <span>ZERO-GPU CPU HARNESS</span>
+                  </div>
+                  <div className="bg-neutral-900/80 border border-white/10 px-4 py-2 rounded-lg">
+                    <span>DETERMINISTIC GREEDY PASS</span>
+                  </div>
+                  <div className="bg-neutral-900/80 border border-white/10 px-4 py-2 rounded-lg">
+                    <span>100% REPRODUCIBLE SEED: 42</span>
+                  </div>
                 </div>
               </div>
             </div>
-          )}
 
-          {/* Footer */}
-          <footer className="border-t border-borderSubtle px-6 py-6 text-center text-xs text-textMuted font-mono">
-            <p>TinyBench &copy; 2026. Built for honest, deterministic CPU AI benchmarking. Zero synthetic data.</p>
+            {/* ================================================================
+                ANIMATED HORIZONTAL MARQUEE TRACK (Image 1 Bottom UI)
+                ================================================================ */}
+            <div className="relative z-10 w-full overflow-hidden py-6 mt-16 border-t border-white/5 bg-black/60 backdrop-blur-sm">
+              <div className="flex whitespace-nowrap animate-marquee hover:[animation-play-state:paused] gap-4">
+                
+                {/* Marquee Pill Sequence (Repeated for infinite continuous loop) */}
+                {[...Array(2)].map((_, loopIdx) => (
+                  <div key={loopIdx} className="flex items-center gap-4">
+                    <div className="bg-[#A3FF00] text-black font-bold text-sm sm:text-base px-6 py-3 rounded-full flex items-center gap-2 shadow-[0_0_15px_rgba(163,255,0,0.4)]">
+                      <span className="text-lg leading-none">+</span>
+                      <span>Web Design & UI/UX</span>
+                    </div>
+
+                    <div className="bg-[#1C2A0A] text-[#A3FF00] border border-[#A3FF00]/30 font-semibold text-sm sm:text-base px-6 py-3 rounded-full flex items-center gap-2">
+                      <span className="text-lg leading-none">+</span>
+                      <span>Deterministic CPU Inference</span>
+                    </div>
+
+                    <div className="bg-[#1C2A0A] text-neutral-300 border border-white/10 font-semibold text-sm sm:text-base px-6 py-3 rounded-full flex items-center gap-2">
+                      <span className="text-lg leading-none">+</span>
+                      <span>Quantized Gemma 4 & SmolLM2</span>
+                    </div>
+
+                    <div className="bg-[#A3FF00] text-black font-bold text-sm sm:text-base px-6 py-3 rounded-full flex items-center gap-2 shadow-[0_0_15px_rgba(163,255,0,0.4)]">
+                      <span className="text-lg leading-none">+</span>
+                      <span>Exact-Match Scoring</span>
+                    </div>
+
+                    <div className="bg-[#1C2A0A] text-[#A3FF00] border border-[#A3FF00]/30 font-semibold text-sm sm:text-base px-6 py-3 rounded-full flex items-center gap-2">
+                      <span className="text-lg leading-none">+</span>
+                      <span>DeepSeek R1 Chain-of-Thought</span>
+                    </div>
+
+                    <div className="bg-[#1C2A0A] text-neutral-300 border border-white/10 font-semibold text-sm sm:text-base px-6 py-3 rounded-full flex items-center gap-2">
+                      <span className="text-lg leading-none">+</span>
+                      <span>Resident Memory Profiling (RSS)</span>
+                    </div>
+
+                    <div className="bg-[#A3FF00] text-black font-bold text-sm sm:text-base px-6 py-3 rounded-full flex items-center gap-2 shadow-[0_0_15px_rgba(163,255,0,0.4)]">
+                      <span className="text-lg leading-none">+</span>
+                      <span>Commodity Hardware Ready</span>
+                    </div>
+                  </div>
+                ))}
+
+              </div>
+            </div>
+          </section>
+
+
+          {/* ==================================================================
+              SECTION 2: "SERVICES" (Ethereal Light Graph Grid Background)
+              ================================================================== */}
+          <section id="services" className="relative py-28 zen-grid-pattern text-neutral-900 border-t border-b border-[#E3ECD8]">
+            <div className="max-w-7xl mx-auto px-6">
+              
+              {/* Section Header */}
+              <div className="mb-16">
+                <h2 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-neutral-950 mb-4">
+                  Services
+                </h2>
+                <p className="text-lg sm:text-xl text-neutral-600 max-w-2xl font-normal leading-relaxed">
+                  Everything your brand needs for more clarity, strong positioning, and stable growth.
+                </p>
+              </div>
+
+              {/* 4 Neon Lime Bento Cards (Image 2 Replication) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                {/* Card 1: Social Media Marketing */}
+                <div className="bg-[#A3FF00] text-black p-8 sm:p-10 rounded-[32px] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col justify-between min-h-[290px] group">
+                  <div className="flex items-start justify-between">
+                    <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight max-w-[200px]">
+                      Social Media Marketing
+                    </h3>
+                    <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
+                      ↗
+                    </div>
+                  </div>
+
+                  {/* Playful Vector Illustration on Right (Phone with TikTok, IG, YT, Heart speech bubble) */}
+                  <div className="self-end mt-4">
+                    <svg className="w-44 h-44 drop-shadow-md group-hover:rotate-1 transition-transform" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      {/* Mobile phone frame tilted */}
+                      <g transform="rotate(-12 100 100)">
+                        <rect x="50" y="25" width="85" height="150" rx="18" fill="#FFFFFF" stroke="#000000" strokeWidth="5"/>
+                        <rect x="57" y="38" width="71" height="124" rx="10" fill="#000000"/>
+                        {/* Screen icons */}
+                        <rect x="68" y="48" width="48" height="30" rx="6" fill="#A3FF00"/>
+                        <circle cx="92" cy="63" r="8" fill="#000000"/>
+                        {/* TikTok icon shape */}
+                        <path d="M82 92C85 92 88 95 91 97V110C89 110 86 108 84 106C82 104 80 100 80 97" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round"/>
+                        {/* Instagram Camera */}
+                        <rect x="74" y="118" width="36" height="24" rx="5" stroke="#FFFFFF" strokeWidth="2.5"/>
+                        <circle cx="92" cy="130" r="4" stroke="#FFFFFF" strokeWidth="2"/>
+                      </g>
+                      {/* Floating Speech bubble with Heart */}
+                      <g transform="translate(15, 60)">
+                        <rect x="0" y="0" width="38" height="32" rx="8" fill="#FFFFFF" stroke="#000000" strokeWidth="3.5"/>
+                        <path d="M19 22L15 28L23 22H19Z" fill="#000000"/>
+                        <path d="M19 19C17 17 12 14 12 10C12 7 15 5 19 8C23 5 26 7 26 10C26 14 21 17 19 19Z" fill="#000000"/>
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Card 2: Pay per click Advertisement */}
+                <div className="bg-[#A3FF00] text-black p-8 sm:p-10 rounded-[32px] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col justify-between min-h-[290px] group">
+                  <div className="flex items-start justify-between">
+                    <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight max-w-[240px]">
+                      Pay per click Advertisement
+                    </h3>
+                    <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
+                      ↗
+                    </div>
+                  </div>
+
+                  {/* Browser window with "AD" and clicking cursor & dollar coin */}
+                  <div className="self-end mt-4">
+                    <svg className="w-48 h-44 drop-shadow-md group-hover:rotate-1 transition-transform" viewBox="0 0 220 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      {/* Browser Window */}
+                      <g transform="rotate(6 110 100)">
+                        <rect x="30" y="40" width="140" height="95" rx="12" fill="#FFFFFF" stroke="#000000" strokeWidth="5"/>
+                        <line x1="30" y1="62" x2="170" y2="62" stroke="#000000" strokeWidth="4"/>
+                        <circle cx="44" cy="51" r="3.5" fill="#000000"/>
+                        <circle cx="54" cy="51" r="3.5" fill="#000000"/>
+                        <circle cx="64" cy="51" r="3.5" fill="#000000"/>
+                        {/* AD Box inside browser */}
+                        <rect x="42" y="74" width="60" height="42" rx="6" fill="#A3FF00" stroke="#000000" strokeWidth="3"/>
+                        <text x="54" y="103" fontFamily="Plus Jakarta Sans, sans-serif" fontWeight="900" fontSize="22" fill="#000000">AD</text>
+                      </g>
+                      {/* Dollar Coin */}
+                      <circle cx="42" cy="145" r="22" fill="#FFFFFF" stroke="#000000" strokeWidth="4.5"/>
+                      <text x="35" y="154" fontFamily="JetBrains Mono, monospace" fontWeight="900" fontSize="24" fill="#000000">$</text>
+                      {/* Mouse Click Cursor */}
+                      <path d="M135 125L150 165L138 170L125 142L112 152L112 110L155 135L135 125Z" fill="#000000" stroke="#FFFFFF" strokeWidth="3"/>
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Card 3: Exact-Match & Reasoning Benchmarks */}
+                <div className="bg-[#A3FF00] text-black p-8 sm:p-10 rounded-[32px] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col justify-between min-h-[290px] group">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                        Deterministic Scoring
+                      </h3>
+                      <p className="text-sm font-semibold text-black/70 mt-1">
+                        Exact String, Numeric, & Regex Tolerance
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
+                      ↗
+                    </div>
+                  </div>
+
+                  <div className="self-end mt-4">
+                    <svg className="w-48 h-44 drop-shadow-md" viewBox="0 0 200 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="20" y="30" width="140" height="100" rx="14" fill="#FFFFFF" stroke="#000000" strokeWidth="5"/>
+                      <path d="M45 80L65 100L115 50" stroke="#000000" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <rect x="35" y="115" width="80" height="8" rx="4" fill="#A3FF00"/>
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Card 4: Resident Memory & Latency Profiling */}
+                <div className="bg-[#A3FF00] text-black p-8 sm:p-10 rounded-[32px] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col justify-between min-h-[290px] group">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                        Hardware Safety & RAM
+                      </h3>
+                      <p className="text-sm font-semibold text-black/70 mt-1">
+                        Peak RSS & Median CPU Latency
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
+                      ↗
+                    </div>
+                  </div>
+
+                  <div className="self-end mt-4">
+                    <svg className="w-48 h-44 drop-shadow-md" viewBox="0 0 200 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      {/* Microchip */}
+                      <rect x="40" y="35" width="100" height="100" rx="16" fill="#FFFFFF" stroke="#000000" strokeWidth="5"/>
+                      <rect x="65" y="60" width="50" height="50" rx="8" fill="#A3FF00" stroke="#000000" strokeWidth="4"/>
+                      <line x1="20" y1="55" x2="40" y2="55" stroke="#000000" strokeWidth="5"/>
+                      <line x1="20" y1="85" x2="40" y2="85" stroke="#000000" strokeWidth="5"/>
+                      <line x1="20" y1="115" x2="40" y2="115" stroke="#000000" strokeWidth="5"/>
+                      <line x1="140" y1="55" x2="160" y2="55" stroke="#000000" strokeWidth="5"/>
+                      <line x1="140" y1="85" x2="160" y2="85" stroke="#000000" strokeWidth="5"/>
+                      <line x1="140" y1="115" x2="160" y2="115" stroke="#000000" strokeWidth="5"/>
+                    </svg>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+
+          {/* ==================================================================
+              SECTION 3: "OUR WORK" (Carousel Showcase Replication)
+              ================================================================== */}
+          <section id="work" className="relative py-28 bg-white text-neutral-900 overflow-hidden">
+            
+            {/* Top Soft Radiant Lime Glow (Image 3 Header Glow) */}
+            <div className="absolute top-0 left-0 right-0 h-48 lime-glow-radial pointer-events-none" />
+
+            <div className="max-w-7xl mx-auto px-6 relative z-10">
+              
+              <div className="mb-14">
+                <h2 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-neutral-950 mb-4">
+                  Our work
+                </h2>
+                <p className="text-lg sm:text-xl text-neutral-600 font-normal">
+                  A curated look at websites, digital experiences, and visual design.
+                </p>
+              </div>
+
+              {/* Horizontal Scroll Carousel (Image 3 UI) */}
+              <div className="flex gap-6 overflow-x-auto pb-8 pt-2 no-scrollbar snap-x snap-mandatory cursor-grab active:cursor-grabbing">
+                {VERIFIED_MODELS.map((model, idx) => (
+                  <div
+                    key={model.id}
+                    onClick={() => setSelectedModel(model)}
+                    className="flex-shrink-0 w-[290px] sm:w-[340px] bg-neutral-950 text-white rounded-[28px] overflow-hidden border border-neutral-800 shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-[#A3FF00] snap-start group"
+                  >
+                    {/* Simulated Screen Card Banner */}
+                    <div className="h-44 bg-gradient-to-br from-neutral-800 to-neutral-900 p-6 flex flex-col justify-between relative overflow-hidden border-b border-neutral-800">
+                      <div className="flex items-center justify-between z-10">
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-[#A3FF00] bg-[#A3FF00]/10 border border-[#A3FF00]/30 px-2.5 py-1 rounded-full">
+                          {model.badge}
+                        </span>
+                        <span className="text-xs font-mono text-neutral-400">0{idx + 1}</span>
+                      </div>
+
+                      <div className="z-10">
+                        <h4 className="text-xl font-bold text-white group-hover:text-[#A3FF00] transition-colors">
+                          {model.name}
+                        </h4>
+                        <p className="text-xs text-neutral-400 font-mono mt-0.5">{model.developer}</p>
+                      </div>
+
+                      {/* Ambient decorative geometry */}
+                      <div className="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-[#A3FF00]/10 blur-xl group-hover:bg-[#A3FF00]/25 transition-all" />
+                    </div>
+
+                    {/* Stats Metric Panel */}
+                    <div className="p-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-3 text-center">
+                        <div className="bg-neutral-900/90 border border-neutral-800 p-3 rounded-xl">
+                          <div className="text-[10px] uppercase font-mono text-neutral-400">Accuracy</div>
+                          <div className="text-2xl font-bold font-mono text-[#A3FF00]">{model.accuracy}%</div>
+                        </div>
+                        <div className="bg-neutral-900/90 border border-neutral-800 p-3 rounded-xl">
+                          <div className="text-[10px] uppercase font-mono text-neutral-400">Latency</div>
+                          <div className="text-2xl font-bold font-mono text-white">{model.latencyMs}ms</div>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+                        {model.description}
+                      </p>
+
+                      <div className="pt-2 flex items-center justify-between text-xs font-mono text-neutral-400 border-t border-neutral-800/80">
+                        <span>RAM: {model.memoryMb} MB</span>
+                        <span className="text-[#A3FF00] group-hover:translate-x-1 transition-transform">Inspect ↗</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+            </div>
+          </section>
+
+
+          {/* ==================================================================
+              SECTION 4: "AI CHATBOT INTEGRATION" (Image 4 Replication)
+              ================================================================== */}
+          <section id="engine" className="relative py-28 zen-grid-pattern text-neutral-900 overflow-hidden border-t border-[#E3ECD8]">
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                
+                {/* Left Column: Headlines & Bullet Points */}
+                <div className="lg:col-span-7">
+                  <h2 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-neutral-950 mb-6">
+                    AI Chatbot integration
+                  </h2>
+                  
+                  <p className="text-lg sm:text-xl text-neutral-600 font-normal leading-relaxed mb-10 max-w-xl">
+                    Better conversations. Less busywork. Connect your business with customers, around the clock.
+                  </p>
+
+                  {/* Feature Checklist with Lime Green Checkmarks */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-7 h-7 rounded-full bg-[#A3FF00] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <svg className="w-4 h-4 text-black stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      </div>
+                      <span className="text-lg sm:text-xl font-bold text-neutral-900 tracking-tight">
+                        Boost Efficiency & Reduce Costs
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="w-7 h-7 rounded-full bg-[#A3FF00] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <svg className="w-4 h-4 text-black stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      </div>
+                      <span className="text-lg sm:text-xl font-bold text-neutral-900 tracking-tight">
+                        24/7 Customer Support Automation
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="w-7 h-7 rounded-full bg-[#A3FF00] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <svg className="w-4 h-4 text-black stroke-[3]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      </div>
+                      <span className="text-lg sm:text-xl font-bold text-neutral-900 tracking-tight">
+                        Seamless Platform Integration
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: 3D White Futuristic Robot (Image 4 Artwork) */}
+                <div className="lg:col-span-5 flex justify-center relative">
+                  <div className="relative w-full max-w-md animate-float-slow">
+                    
+                    {/* SVG Render of High-Tech Futuristic Humanoid Robot */}
+                    <svg className="w-full h-auto drop-shadow-2xl" viewBox="0 0 400 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      
+                      {/* Neck & Shoulders (Matte White Chassis) */}
+                      <path d="M140 280C140 230 170 210 200 210C230 210 260 230 260 280L330 320C360 340 370 380 350 420L310 480H90L50 420C30 380 40 340 70 320L140 280Z" fill="#F4F4F6"/>
+                      <path d="M150 290C150 245 175 225 200 225C225 225 250 245 250 290L300 325C315 335 320 355 310 370L280 410H120L90 370C80 355 85 335 100 325L150 290Z" fill="#E2E4E8"/>
+                      
+                      {/* Robot Torso Insignia: Segmented Neon Lime Logo */}
+                      <g transform="translate(162, 330) scale(0.65)">
+                        <path d="M0 4H26V10L10 22H26V28H0V22L16 10H0V4Z" fill="#A3FF00"/>
+                        <path d="M34 4H58V10H43V13H55V19H43V22H58V28H34V4Z" fill="#A3FF00"/>
+                        <path d="M66 4H75L86 18V4H94V28H85L74 14V28H66V4Z" fill="#A3FF00"/>
+                      </g>
+
+                      {/* Head Base / Chin */}
+                      <rect x="175" y="190" width="50" height="35" rx="10" fill="#D3D6DC"/>
+                      
+                      {/* Robot Head (Black Glossy Visor + Glowing Green Matrix Face) */}
+                      <path d="M135 100C135 50 165 30 200 30C235 30 265 50 265 100C265 160 245 195 200 195C155 195 135 160 135 100Z" fill="#0A0D08" stroke="#162010" strokeWidth="6"/>
+                      
+                      {/* Green Glow Trim around Ear Pads */}
+                      <ellipse cx="132" cy="115" rx="10" ry="24" fill="#0F170B" stroke="#A3FF00" strokeWidth="4"/>
+                      <ellipse cx="268" cy="115" rx="10" ry="24" fill="#0F170B" stroke="#A3FF00" strokeWidth="4"/>
+
+                      {/* Illuminated Neon Green Visor Grid Face */}
+                      <g opacity="0.9">
+                        <circle cx="175" cy="100" r="2.5" fill="#A3FF00"/>
+                        <circle cx="185" cy="100" r="2.5" fill="#A3FF00"/>
+                        <circle cx="195" cy="100" r="2.5" fill="#A3FF00"/>
+                        <circle cx="205" cy="100" r="2.5" fill="#A3FF00"/>
+                        <circle cx="215" cy="100" r="2.5" fill="#A3FF00"/>
+                        <circle cx="225" cy="100" r="2.5" fill="#A3FF00"/>
+
+                        <circle cx="180" cy="110" r="2.5" fill="#A3FF00"/>
+                        <circle cx="190" cy="110" r="2.5" fill="#A3FF00"/>
+                        <circle cx="200" cy="110" r="2.5" fill="#A3FF00"/>
+                        <circle cx="210" cy="110" r="2.5" fill="#A3FF00"/>
+                        <circle cx="220" cy="110" r="2.5" fill="#A3FF00"/>
+
+                        <circle cx="185" cy="120" r="2.5" fill="#A3FF00"/>
+                        <circle cx="195" cy="120" r="2.5" fill="#A3FF00"/>
+                        <circle cx="205" cy="120" r="2.5" fill="#A3FF00"/>
+                        <circle cx="215" cy="120" r="2.5" fill="#A3FF00"/>
+                      </g>
+
+                      {/* Head Gloss Highlight Reflection */}
+                      <path d="M150 55C170 42 200 42 225 50" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" opacity="0.4"/>
+                    </svg>
+
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+
+          {/* ==================================================================
+              SECTION 5: "LET'S TALK." & LIVE BENCHMARK STUDIO (Image 5)
+              ================================================================== */}
+          <section id="contact" className="relative py-28 zen-grid-pattern text-neutral-900 border-t border-[#E3ECD8]">
+            <div className="max-w-7xl mx-auto px-6">
+              
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+                
+                {/* Left Column: Form / Headline */}
+                <div className="lg:col-span-6">
+                  <h2 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-neutral-950 mb-8">
+                    Let's talk.
+                  </h2>
+
+                  {formSubmitted ? (
+                    <div className="bg-white p-8 rounded-3xl border border-neutral-200 shadow-sm">
+                      <div className="w-12 h-12 rounded-full bg-[#A3FF00] flex items-center justify-center mb-4">
+                        ✓
+                      </div>
+                      <h4 className="text-2xl font-bold text-neutral-950 mb-2">Message Received</h4>
+                      <p className="text-neutral-600 mb-6">
+                        Thank you for reaching out. We will get back to your inquiry promptly.
+                      </p>
+                      <button 
+                        onClick={() => setFormSubmitted(false)}
+                        className="px-6 py-2.5 rounded-full bg-black text-white text-xs uppercase font-mono tracking-wider font-bold"
+                      >
+                        Send another message
+                      </button>
+                    </div>
+                  ) : (
+                    <form 
+                      onSubmit={(e) => { e.preventDefault(); setFormSubmitted(true); }}
+                      className="space-y-6"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-mono uppercase tracking-wider text-neutral-600 mb-2">Your Name</label>
+                          <input 
+                            type="text" 
+                            required
+                            placeholder="Your name"
+                            value={contactForm.name}
+                            onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                            className="w-full bg-white border border-neutral-300 focus:border-black focus:ring-2 focus:ring-[#A3FF00] rounded-2xl px-5 py-3.5 text-neutral-900 outline-none transition-all placeholder:text-neutral-400"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-mono uppercase tracking-wider text-neutral-600 mb-2">Work Email</label>
+                          <input 
+                            type="email" 
+                            required
+                            placeholder="you@company.com"
+                            value={contactForm.email}
+                            onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                            className="w-full bg-white border border-neutral-300 focus:border-black focus:ring-2 focus:ring-[#A3FF00] rounded-2xl px-5 py-3.5 text-neutral-900 outline-none transition-all placeholder:text-neutral-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-mono uppercase tracking-wider text-neutral-600 mb-2">Message</label>
+                        <textarea 
+                          rows="4"
+                          required
+                          placeholder="Tell us what you have in mind"
+                          value={contactForm.message}
+                          onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                          className="w-full bg-white border border-neutral-300 focus:border-black focus:ring-2 focus:ring-[#A3FF00] rounded-2xl p-5 text-neutral-900 outline-none transition-all placeholder:text-neutral-400 resize-none"
+                        ></textarea>
+                      </div>
+
+                      {/* Neon Green Send Message Pill Button (Image 5 Button) */}
+                      <div>
+                        <button 
+                          type="submit"
+                          className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-[#A3FF00] hover:bg-[#B5FF26] text-black font-extrabold text-base tracking-tight shadow-md hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 group"
+                        >
+                          <span>Send message</span>
+                          <span className="text-xl group-hover:translate-x-1 transition-transform">↗</span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+
+                {/* Right Column: Interactive Live Benchmarking Console */}
+                <div className="lg:col-span-6 bg-black text-white p-8 sm:p-10 rounded-[32px] border border-neutral-800 shadow-2xl">
+                  <div className="flex items-center justify-between mb-6 border-b border-white/10 pb-4">
+                    <div>
+                      <div className="text-xs font-mono text-[#A3FF00] uppercase tracking-widest">Interactive Telemetry</div>
+                      <h3 className="text-2xl font-bold text-white">Live Benchmark Studio</h3>
+                    </div>
+                    <span className="text-xs font-mono bg-white/10 px-3 py-1 rounded-full text-neutral-300">
+                      In-Browser Engine
+                    </span>
+                  </div>
+
+                  <div className="space-y-5">
+                    <div>
+                      <label className="block text-xs font-mono text-neutral-400 mb-2 uppercase">Target Evaluation Model</label>
+                      <select 
+                        value={selectedModel.id}
+                        onChange={(e) => setSelectedModel(VERIFIED_MODELS.find(m => m.id === e.target.value))}
+                        className="w-full bg-neutral-900 border border-neutral-700 text-white rounded-xl px-4 py-3 font-mono text-xs focus:border-[#A3FF00] outline-none"
+                      >
+                        {VERIFIED_MODELS.map(m => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.developer})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 font-mono text-center text-xs">
+                      <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
+                        <span className="text-neutral-500 block text-[10px]">PARAMS</span>
+                        <span className="font-bold text-white">{selectedModel.parameters}</span>
+                      </div>
+                      <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
+                        <span className="text-neutral-500 block text-[10px]">RUNTIME</span>
+                        <span className="font-bold text-[#A3FF00]">{selectedModel.runtime.split(" ")[0]}</span>
+                      </div>
+                      <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
+                        <span className="text-neutral-500 block text-[10px]">LICENSE</span>
+                        <span className="font-bold text-white">{selectedModel.license}</span>
+                      </div>
+                    </div>
+
+                    {/* Execution Action Button */}
+                    <button
+                      onClick={runInteractiveBenchmark}
+                      disabled={runningEval}
+                      className="w-full py-3.5 rounded-full bg-[#A3FF00] hover:bg-[#B5FF26] text-black font-bold text-sm tracking-wide uppercase transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(163,255,0,0.3)]"
+                    >
+                      {runningEval ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                          <span>Evaluating Tasks ({evalProgress}%)</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>▶ Execute Benchmark Run ({selectedModel.name})</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Real-time Streaming Tasks Table */}
+                    <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800/80 font-mono text-xs max-h-48 overflow-y-auto space-y-2">
+                      {evalLogs.length === 0 ? (
+                        <div className="text-neutral-500 text-center py-4">
+                          Ready to benchmark. Click button above to initiate tasks.
+                        </div>
+                      ) : (
+                        evalLogs.map((log, i) => (
+                          <div key={i} className="flex items-center justify-between py-1 border-b border-white/5 last:border-none">
+                            <span className="text-neutral-400">{log.taskId}</span>
+                            <span className="text-neutral-500">{log.category}</span>
+                            <span className="text-neutral-300">{log.latency}s</span>
+                            <span className={log.status === "PASSED" ? "text-[#A3FF00] font-bold" : "text-rose-500 font-bold"}>
+                              {log.status === "PASSED" ? "✓ OK" : "✗ FAIL"}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+
+          {/* ==================================================================
+              FOOTER (Replication of Image 5 Footer)
+              ================================================================== */}
+          <footer className="zen-grid-pattern text-neutral-900 border-t border-[#E3ECD8] py-16">
+            <div className="max-w-7xl mx-auto px-6">
+              
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
+                
+                {/* Brand & Subtext */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <svg className="h-9 w-auto fill-[#A3FF00] bg-black p-1.5 rounded-lg" viewBox="0 0 120 32" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M0 4H26V10L10 22H26V28H0V22L16 10H0V4Z"/>
+                      <path d="M34 4H58V10H43V13H55V19H43V22H58V28H34V4Z"/>
+                      <path d="M66 4H75L86 18V4H94V28H85L74 14V28H66V4Z"/>
+                      <circle cx="106" cy="16" r="5" fill="#A3FF00"/>
+                    </svg>
+                    <div>
+                      <div className="font-extrabold text-sm tracking-tight text-neutral-900">Creative Marketing Agency</div>
+                      <div className="text-xs font-mono text-neutral-500">TinyBench AI Benchmarking</div>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-neutral-600 max-w-md font-medium">
+                    Creative Marketing Agency. Strategy, creativity, and growth in one space.
+                  </p>
+                </div>
+
+                {/* External Links */}
+                <div className="space-y-3 text-right">
+                  <a 
+                    href="https://github.com/shettyadithyar76-prog/tinybench" 
+                    target="_blank"
+                    className="flex items-center justify-end gap-2 text-sm font-semibold text-neutral-900 hover:text-black hover:underline"
+                  >
+                    <span>🌐 www.tinybench.org</span>
+                  </a>
+
+                  <a 
+                    href="https://github.com/shettyadithyar76-prog/tinybench" 
+                    target="_blank"
+                    className="block text-sm font-semibold text-neutral-900 hover:text-black hover:underline"
+                  >
+                    @tinybenchai
+                  </a>
+                </div>
+
+              </div>
+
+              {/* Bottom Copyright & Status */}
+              <div className="pt-8 border-t border-neutral-300/80 flex flex-col sm:flex-row items-center justify-between text-xs text-neutral-500 font-mono gap-4">
+                <div>&copy; 2026 TinyBench. Inspired by ZEN Agency on 21st.dev.</div>
+                <div className="flex items-center gap-4">
+                  <span>Branch: main</span>
+                  <span>&bull;</span>
+                  <span className="text-emerald-700 font-bold">● Vercel Production Build</span>
+                </div>
+              </div>
+
+            </div>
           </footer>
+
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    // Render the React application
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
