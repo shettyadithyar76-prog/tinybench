@@ -637,22 +637,77 @@
                 
                 {/* Hero / About Section */}
                 <section className="relative pt-24 pb-16 overflow-hidden border-b border-white/5">
-                  <div className="max-w-7xl mx-auto px-6">
+                  {/* Orangish Background with Shadow Silhouette */}
+                  <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
+                    <img 
+                      src="hero-bg.png" 
+                      alt="Hero Background" 
+                      className="w-full h-full object-cover object-right opacity-90"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent w-full h-full" />
+                  </div>
+
+                  <div className="max-w-7xl mx-auto px-6 relative z-10">
                     <div className="max-w-4xl">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#A3FF00]/40 bg-[#A3FF00]/10 text-[#A3FF00] font-mono text-xs font-semibold mb-6">
-                        <span className="w-2 h-2 rounded-full bg-[#A3FF00] animate-pulse" />
-                        <span>DETERMINISTIC CPU BENCHMARKING</span>
+                      <div className="flex flex-wrap items-center gap-2 mb-6">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-500/40 bg-blue-500/10 text-blue-400 font-mono text-xs font-semibold">
+                          <span className="w-2 h-2 rounded-full bg-blue-400" />
+                          <span>Open-Weight CPU Suite</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#A3FF00]/40 bg-[#A3FF00]/10 text-[#A3FF00] font-mono text-xs font-semibold">
+                          <span className="w-2 h-2 rounded-full bg-[#A3FF00] animate-pulse" />
+                          <span>Deterministic Grading</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-violet-500/40 bg-violet-500/10 text-violet-400 font-mono text-xs font-semibold">
+                          <span className="w-2 h-2 rounded-full bg-violet-400" />
+                          <span>Chain-of-Thought Ready</span>
+                        </span>
                       </div>
 
-                      <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight mb-8">
-                        About us
+                      <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight mb-6">
+                        Transparent LLM Evaluation for Ordinary Hardware
                       </h1>
                       
-                      <p className={`text-xl sm:text-2xl lg:text-3xl font-medium leading-relaxed max-w-3xl ${
+                      <p className={`text-xl sm:text-2xl font-medium leading-relaxed max-w-3xl mb-8 ${
                         isDark ? 'text-slate-300' : 'text-slate-700'
                       }`}>
-                        <strong className={isDark ? 'text-white' : 'text-black'}>TINYBENCH</strong> creates a clear direction for local AI evaluation, reproducible CPU inference benchmarks, and edge intelligence that unites idea, system, and result.
+                        <strong className={isDark ? 'text-white' : 'text-black'}>TinyBench</strong> measures objective task accuracy, exact string matching, instruction compliance, latency, and memory footprints for real open-weight language models on consumer CPU hardware.
                       </p>
+
+                      <div className="flex flex-wrap items-center gap-4 mb-10">
+                        <button
+                          onClick={() => {
+                            setSelectedModelId("gemma4:e2b");
+                            setScopePreset("Quick Test (5 tasks)");
+                            setNavView("run_benchmark");
+                            launchBenchmark();
+                          }}
+                          className="px-6 py-3.5 text-sm font-extrabold rounded-2xl bg-[#A3FF00] hover:bg-[#B5FF26] text-black transition-all flex items-center gap-2 shadow-lg shadow-[#A3FF00]/20 hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                          <span>⚡ One-Click Quick Run (Gemma 4)</span>
+                          <span>→</span>
+                        </button>
+                        <button
+                          onClick={() => setNavView("run_benchmark")}
+                          className={`px-6 py-3.5 text-sm font-bold rounded-2xl border transition-all ${
+                            isDark 
+                              ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white' 
+                              : 'bg-white border-[#D4DEC8] hover:bg-slate-50 text-black'
+                          }`}
+                        >
+                          ⚙️ Configure Benchmark Studio
+                        </button>
+                        <button
+                          onClick={() => setShowEndpointModal(true)}
+                          className={`px-4 py-3.5 text-xs font-mono font-medium rounded-2xl border transition-all ${
+                            isDark 
+                              ? 'bg-black/40 border-white/10 hover:border-white/20 text-slate-300' 
+                              : 'bg-[#F2F7EE] border-[#D4DEC8] hover:border-slate-400 text-slate-700'
+                          }`}
+                        >
+                          🔌 Connect Ollama / Cloudflare
+                        </button>
+                      </div>
 
                       {/* Cross-Link Banner to Streamlit Cloud App */}
                       <div className={`mt-10 p-6 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
@@ -722,71 +777,62 @@
                   </div>
                 </section>
 
-                {/* Section 2: Services Bento Cards */}
+                {/* Section 2: Core Capabilities */}
                 <section className="py-24 border-b border-white/5">
                   <div className="max-w-7xl mx-auto px-6">
                     <div className="mb-14">
                       <h2 className="text-4xl sm:text-6xl font-black tracking-tight mb-3">
-                        Services
+                        Evaluation Capabilities
                       </h2>
                       <p className={`text-lg sm:text-xl font-normal max-w-2xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                        Everything your brand needs for more clarity, strong positioning, and stable growth.
+                        Deterministic metrics and hardware telemetry for small language models running without GPU acceleration.
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {/* Service 1 */}
+                      {/* Capability 1 */}
                       <div 
                         onClick={() => setNavView("run_benchmark")}
                         className="bg-[#A3FF00] text-black p-8 sm:p-10 rounded-[32px] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col justify-between min-h-[290px] cursor-pointer group"
                       >
                         <div className="flex items-start justify-between">
-                          <h3 className="text-2xl sm:text-3xl font-black tracking-tight max-w-[220px]">
-                            Social Media Marketing
+                          <h3 className="text-2xl sm:text-3xl font-black tracking-tight max-w-[260px]">
+                            Deterministic CPU Benchmarking
                           </h3>
                           <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
                             ↗
                           </div>
                         </div>
+                        <p className="text-black/80 font-medium text-sm max-w-sm mt-3">
+                          Exact string matching, multiple choice validation, and tolerance scoring with 0.0 greedy decoding.
+                        </p>
                         <div className="self-end mt-4">
-                          <svg className="w-40 h-40 drop-shadow-md group-hover:rotate-1 transition-transform" viewBox="0 0 200 200" fill="none">
-                            <g transform="rotate(-12 100 100)">
-                              <rect x="50" y="25" width="85" height="150" rx="18" fill="#FFFFFF" stroke="#000000" strokeWidth="5"/>
-                              <rect x="57" y="38" width="71" height="124" rx="10" fill="#000000"/>
-                              <rect x="68" y="48" width="48" height="30" rx="6" fill="#A3FF00"/>
-                              <circle cx="92" cy="63" r="8" fill="#000000"/>
-                              <path d="M82 92C85 92 88 95 91 97V110C89 110 86 108 84 106C82 104 80 100 80 97" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round"/>
-                              <rect x="74" y="118" width="36" height="24" rx="5" stroke="#FFFFFF" strokeWidth="2.5"/>
-                              <circle cx="92" cy="130" r="4" stroke="#FFFFFF" strokeWidth="2"/>
-                            </g>
-                          </svg>
+                          <span className="font-mono text-xs font-black uppercase tracking-wider bg-black text-[#A3FF00] px-3 py-1.5 rounded-full">
+                            Launch Studio ↗
+                          </span>
                         </div>
                       </div>
 
-                      {/* Service 2 */}
+                      {/* Capability 2 */}
                       <div 
                         onClick={() => setNavView("leaderboard")}
                         className="bg-[#A3FF00] text-black p-8 sm:p-10 rounded-[32px] relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col justify-between min-h-[290px] cursor-pointer group"
                       >
                         <div className="flex items-start justify-between">
-                          <h3 className="text-2xl sm:text-3xl font-black tracking-tight max-w-[240px]">
-                            Pay per click Advertisement
+                          <h3 className="text-2xl sm:text-3xl font-black tracking-tight max-w-[260px]">
+                            Hardware Telemetry & Memory
                           </h3>
                           <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center text-xl font-black group-hover:scale-110 transition-transform">
                             ↗
                           </div>
                         </div>
+                        <p className="text-black/80 font-medium text-sm max-w-sm mt-3">
+                          Measure process RSS memory, time-to-first-token (TTFT), tokens/sec, and CPU core utilization.
+                        </p>
                         <div className="self-end mt-4">
-                          <svg className="w-44 h-40 drop-shadow-md group-hover:rotate-1 transition-transform" viewBox="0 0 220 200" fill="none">
-                            <g transform="rotate(6 110 100)">
-                              <rect x="30" y="40" width="140" height="95" rx="12" fill="#FFFFFF" stroke="#000000" strokeWidth="5"/>
-                              <line x1="30" y1="62" x2="170" y2="62" stroke="#000000" strokeWidth="4"/>
-                              <rect x="42" y="74" width="60" height="42" rx="6" fill="#A3FF00" stroke="#000000" strokeWidth="3"/>
-                              <text x="54" y="103" fontFamily="Plus Jakarta Sans, sans-serif" fontWeight="900" fontSize="22" fill="#000000">AD</text>
-                            </g>
-                            <circle cx="42" cy="145" r="22" fill="#FFFFFF" stroke="#000000" strokeWidth="4.5"/>
-                            <text x="35" y="154" fontFamily="JetBrains Mono, monospace" fontWeight="900" fontSize="24" fill="#000000">$</text>
-                          </svg>
+                          <span className="font-mono text-xs font-black uppercase tracking-wider bg-black text-[#A3FF00] px-3 py-1.5 rounded-full">
+                            View Leaderboard ↗
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -798,10 +844,10 @@
                   <div className="max-w-7xl mx-auto px-6">
                     <div className="mb-12">
                       <h2 className="text-4xl sm:text-6xl font-black tracking-tight mb-3">
-                        Our work
+                        Benchmark Models
                       </h2>
                       <p className={`text-lg sm:text-xl font-normal ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                        A curated look at websites, digital experiences, and visual design.
+                        Standardized open-weight architectures verified on consumer CPU hardware.
                       </p>
                     </div>
 
@@ -853,16 +899,16 @@
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                       <div className="lg:col-span-7">
                         <h2 className="text-4xl sm:text-6xl font-black tracking-tight mb-6">
-                          AI Chatbot integration
+                          Autonomous CPU Benchmarking
                         </h2>
                         <p className={`text-lg sm:text-xl font-normal leading-relaxed mb-8 max-w-xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                          Better conversations. Less busywork. Connect your business with customers, around the clock.
+                          Reproducible evaluation pipelines designed for edge nodes, CI/CD runners, and developer workstations.
                         </p>
                         <div className="space-y-5">
                           {[
-                            "Boost Efficiency & Reduce Costs",
-                            "24/7 Customer Support Automation",
-                            "Seamless Platform Integration"
+                            "Zero GPU Dependency — Pure CPU Optimization",
+                            "Strict 0.0 Greedy Decoding for Determinism",
+                            "Cross-Platform Streamlit & Web Architecture"
                           ].map((item, i) => (
                             <div key={i} className="flex items-center gap-4">
                               <div className="w-7 h-7 rounded-full bg-[#A3FF00] flex items-center justify-center flex-shrink-0 text-black font-black text-sm">
