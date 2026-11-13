@@ -503,20 +503,21 @@
           }`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 py-3.5 flex items-center justify-between gap-4">
               
-              {/* Brand Logo: ZEN/TinyBench Chunky Geometric Block Mark */}
+              {/* Brand Logo: TinyBench High-Impact Mark */}
               <div 
                 onClick={() => setNavView("landing")} 
                 className="flex items-center gap-3 cursor-pointer group"
               >
-                <svg className="h-7 w-auto fill-[#A3FF00] group-hover:scale-105 transition-transform" viewBox="0 0 120 32" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M0 4H26V10L10 22H26V28H0V22L16 10H0V4Z"/>
-                  <path d="M34 4H58V10H43V13H55V19H43V22H58V28H34V4Z"/>
-                  <path d="M66 4H75L86 18V4H94V28H85L74 14V28H66V4Z"/>
-                  <circle cx="106" cy="16" r="5" fill="#A3FF00"/>
-                </svg>
+                <div className="w-10 h-10 rounded-xl bg-[#A3FF00] flex items-center justify-center text-black font-black text-xl shadow-[0_0_15px_rgba(163,255,0,0.5)] group-hover:scale-105 transition-transform">
+                  ⚡
+                </div>
                 <div className="flex flex-col">
-                  <span className="font-extrabold text-sm tracking-tight leading-tight">TinyBench</span>
-                  <span className="text-[10px] font-mono text-[#A3FF00] font-semibold leading-none">v0.2.0 • CPU Studio</span>
+                  <span className="font-black text-2xl sm:text-3xl tracking-tight leading-none text-[#A3FF00]">
+                    TINYBENCH
+                  </span>
+                  <span className={`text-[11px] font-mono font-semibold tracking-wider ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`}>
+                    AI BENCHMARK STUDIO
+                  </span>
                 </div>
               </div>
 
@@ -880,10 +881,9 @@
                         <div className="w-full max-w-sm animate-float-slow">
                           <svg className="w-full h-auto drop-shadow-2xl" viewBox="0 0 400 460" fill="none">
                             <path d="M140 260C140 220 170 200 200 200C230 200 260 220 260 260L330 300C360 320 370 360 350 400L310 460H90L50 400C30 360 40 320 70 300L140 260Z" fill="#F4F4F6"/>
-                            <g transform="translate(162, 310) scale(0.65)">
-                              <path d="M0 4H26V10L10 22H26V28H0V22L16 10H0V4Z" fill="#A3FF00"/>
-                              <path d="M34 4H58V10H43V13H55V19H43V22H58V28H34V4Z" fill="#A3FF00"/>
-                              <path d="M66 4H75L86 18V4H94V28H85L74 14V28H66V4Z" fill="#A3FF00"/>
+                            <g transform="translate(182, 335)">
+                              <circle cx="0" cy="0" r="18" fill="#A3FF00"/>
+                              <path d="M-4 -8L6 -8L-2 0L5 0L-5 8L-2 2L-6 2Z" fill="#000000"/>
                             </g>
                             <path d="M135 90C135 45 165 25 200 25C235 25 265 45 265 90C265 150 245 185 200 185C155 185 135 150 135 90Z" fill="#0A0D08" stroke="#162010" strokeWidth="6"/>
                             <ellipse cx="132" cy="105" rx="10" ry="22" fill="#0F170B" stroke="#A3FF00" strokeWidth="3"/>
@@ -1385,14 +1385,11 @@
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <svg className="h-8 w-auto fill-[#A3FF00] bg-black p-1.5 rounded-lg" viewBox="0 0 120 32">
-                      <path d="M0 4H26V10L10 22H26V28H0V22L16 10H0V4Z"/>
-                      <path d="M34 4H58V10H43V13H55V19H43V22H58V28H34V4Z"/>
-                      <path d="M66 4H75L86 18V4H94V28H85L74 14V28H66V4Z"/>
-                      <circle cx="106" cy="16" r="5" fill="#A3FF00"/>
-                    </svg>
+                    <div className="w-9 h-9 rounded-xl bg-[#A3FF00] flex items-center justify-center text-black font-black text-lg shadow-[0_0_12px_rgba(163,255,0,0.4)]">
+                      ⚡
+                    </div>
                     <div>
-                      <div className={`font-extrabold text-sm tracking-tight ${isDark ? 'text-white' : 'text-black'}`}>TinyBench AI</div>
+                      <div className="font-black text-xl tracking-tight text-[#A3FF00]">TINYBENCH</div>
                       <div className="text-xs font-mono text-neutral-500">Open-Weight CPU Benchmarking</div>
                     </div>
                   </div>
