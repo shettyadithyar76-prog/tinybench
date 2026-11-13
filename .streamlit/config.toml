@@ -2,11 +2,11 @@
 showErrorDetails = "full"
 
 [theme]
-base = "light"
-primaryColor = "#06B6D4"
-backgroundColor = "#FFFDF7"
-secondaryBackgroundColor = "#F3F4F8"
-textColor = "#111827"
+base = "dark"
+primaryColor = "#00D2FF"
+backgroundColor = "#090D13"
+secondaryBackgroundColor = "#0E141F"
+textColor = "#F8FAFC"
 font = "sans serif"
 
 [server]
