@@ -234,15 +234,26 @@ async def api_run_detail(request: Request) -> JSONResponse:
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+def get_benchmark_dataset_path() -> Path:
+    """Resolve active benchmark dataset path with fallback."""
+    candidates = [
+        CURRENT_DIR / "datasets" / "basic_v1.jsonl",
+        CURRENT_DIR / "data" / "golden_benchmark.jsonl",
+        CURRENT_DIR / "tests" / "fixtures" / "sample_benchmark.jsonl",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return CURRENT_DIR / "datasets" / "basic_v1.jsonl"
+
+
 def _execute_benchmark_thread(config: BenchmarkConfig, selected_categories: list[str] | None):
     """Worker thread running TinyBench benchmark runner."""
     global active_execution
     try:
         dataset_path = Path(config.dataset_path)
         if not dataset_path.exists():
-            dataset_path = CURRENT_DIR / "data" / "golden_benchmark.jsonl"
-            if not dataset_path.exists():
-                dataset_path = CURRENT_DIR / "tests" / "fixtures" / "sample_benchmark.jsonl"
+            dataset_path = get_benchmark_dataset_path()
             config.dataset_path = str(dataset_path)
 
         categories = None
@@ -250,7 +261,7 @@ def _execute_benchmark_thread(config: BenchmarkConfig, selected_categories: list
             categories = [TaskCategory(c) for c in selected_categories if c in [tc.value for tc in TaskCategory]]
 
         dataset = load_dataset(dataset_path, categories=categories, limit=config.limit)
-        total_items = len(dataset.items)
+        total_items = len(dataset)
 
         active_execution["total"] = total_items
         broadcast_event("started", {
@@ -351,9 +362,7 @@ async def api_benchmark_start(request: Request) -> JSONResponse:
             "should_cancel": False,
         }
 
-    dataset_path = CURRENT_DIR / "data" / "golden_benchmark.jsonl"
-    if not dataset_path.exists():
-        dataset_path = CURRENT_DIR / "tests" / "fixtures" / "sample_benchmark.jsonl"
+    dataset_path = get_benchmark_dataset_path()
 
     config = BenchmarkConfig(
         model_name=model_id,

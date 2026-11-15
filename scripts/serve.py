@@ -44,10 +44,10 @@ def main():
     parser.add_argument("--no-tunnel", action="store_true", help="Do not start cloudflared tunnel")
     args = parser.parse_args()
 
-    print("=" * 70)
-    print("  🚀 TinyBench Local Inference & Hardware API Server")
-    print(f"  📍 Host: http://{args.host}:{args.port}")
-    print("=" * 70)
+    print("=" * 70, flush=True)
+    print("  🚀 TinyBench Local Inference & Hardware API Server", flush=True)
+    print(f"  📍 Host: http://{args.host}:{args.port}", flush=True)
+    print("=" * 70, flush=True)
 
     tunnel_proc = None
     tunnel_url = None
@@ -55,10 +55,9 @@ def main():
     if not args.no_tunnel:
         cf_bin = find_cloudflared()
         if cf_bin:
-            print("\n  🌐 Launching Cloudflare Tunnel (cloudflared)...")
+            print("\n  🌐 Launching Cloudflare Tunnel (cloudflared)...", flush=True)
             tunnel_cmd = [cf_bin, "tunnel", "--url", f"http://{args.host}:{args.port}"]
             try:
-                # cloudflared prints the tunnel URL to stderr
                 tunnel_proc = subprocess.Popen(
                     tunnel_cmd,
                     stdout=subprocess.PIPE,
@@ -69,29 +68,29 @@ def main():
 
                 # Read output to capture trycloudflare.com URL
                 start_time = time.time()
-                while time.time() - start_time < 12.0:
+                while time.time() - start_time < 20.0:
                     line = tunnel_proc.stderr.readline()
                     if line:
-                        match = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", line)
-                        if match:
+                        match = re.search(r"https://([a-zA-Z0-9-]+)\.trycloudflare\.com", line)
+                        if match and match.group(1).lower() != "api":
                             tunnel_url = match.group(0)
                             break
-                    time.sleep(0.1)
+                    time.sleep(0.05)
 
                 if tunnel_url:
-                    print("\n  " + "—" * 66)
-                    print(f"  ⚡ CLOUDFLARE TUNNEL LIVE: \033[92m\033[1m{tunnel_url}\033[0m")
-                    print("  —" * 66)
-                    print("  👉 Enter this URL into your Vercel frontend (tinybench.vercel.app)")
-                    print("     under 'Connect Laptop Backend' to run real benchmarks!")
-                    print("  —" * 66 + "\n")
+                    print("\n  " + "—" * 66, flush=True)
+                    print(f"  ⚡ CLOUDFLARE TUNNEL LIVE: {tunnel_url}", flush=True)
+                    print("  —" * 66, flush=True)
+                    print("  👉 Enter this URL into your Vercel frontend (tinybench.vercel.app)", flush=True)
+                    print("     under 'Connect Laptop Backend' to run real benchmarks!", flush=True)
+                    print("  —" * 66 + "\n", flush=True)
                 else:
-                    print("  ⚠️  Tunnel started, but URL regex match timed out. Check cloudflared output.")
+                    print("  ⚠️  Tunnel started, but URL regex match timed out. Check cloudflared output.", flush=True)
             except Exception as e:
-                print(f"  ⚠️  Could not start cloudflared: {e}")
+                print(f"  ⚠️  Could not start cloudflared: {e}", flush=True)
         else:
-            print("  ℹ️  'cloudflared' not found. Running in local mode only.")
-            print(f"     Direct local URL: http://{args.host}:{args.port}")
+            print("  ℹ️  'cloudflared' not found. Running in local mode only.", flush=True)
+            print(f"     Direct local URL: http://{args.host}:{args.port}", flush=True)
 
     # Launch uvicorn
     import uvicorn
