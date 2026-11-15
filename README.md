@@ -1,6 +1,6 @@
 # TinyBench ⚡
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://tinybench-aibenchmark.streamlit.app/)
+[![Vercel App](https://img.shields.io/badge/Vercel-tinybench.vercel.app-black?style=flat&logo=vercel)](https://tinybench.vercel.app)
 [![Tests](https://github.com/shettyadithyar76-prog/tinybench/actions/workflows/tests.yml/badge.svg)](https://github.com/shettyadithyar76-prog/tinybench/actions)
 [![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
@@ -22,7 +22,7 @@ Students, hobbyists, and independent researchers working on everyday laptops are
 - 🎯 **Objective Grading**: Deterministic evaluation of factual recall, multiple-choice questions, arithmetic reasoning, and strict rule-based instruction compliance.
 - ⏱️ **Monotonic Latency & RAM Profiling**: Accurate measurement of cold-start initialization, mean/median inference latency, and peak resident memory (RSS).
 - 🧪 **Zero-Download Mock Engine**: Fully functional deterministic mock backends allow contributors to run tests, experiment with pipelines, and preview the UI in seconds without downloading gigabytes of weights.
-- 📊 **Streamlit Dashboard & CLI**: Clean, research-oriented dashboard with Plotly charts, SQLite run history, and single-click CSV/JSON exports.
+- 🌐 **Vercel Web Studio + Cloudflare Tunnel**: Static, ultra-fast modern web studio on Vercel connecting securely to your laptop backend over free Cloudflare Tunnels with real-time SSE telemetry and SQLite persistence.
 
 ---
 
@@ -42,7 +42,7 @@ python -m venv venv
 # On macOS/Linux:
 source venv/bin/activate
 
-# Install with development & dashboard dependencies
+# Install with development & server dependencies
 pip install -e ".[all]"
 ```
 
@@ -63,12 +63,17 @@ Output:
 - Peak Process RSS: 34.8 MB
 ```
 
-### 3. Launch the Interactive Dashboard
+### 3. Launch the Laptop Backend & Cloudflare Tunnel
 
 ```bash
-streamlit run app.py
+# On Windows, simply run:
+start_backend.bat
+
+# Or using Python:
+python scripts/serve.py
 ```
-Open your browser at `http://localhost:8501` to explore interactive Plotly charts, model comparisons, and per-task outputs.
+
+This starts the local inference server and launches a free `cloudflared` tunnel. Open **[tinybench.vercel.app](https://tinybench.vercel.app)**, click **Connect Laptop**, paste your `https://*.trycloudflare.com` URL, and execute real CPU benchmarks with live streaming telemetry!
 
 ---
 

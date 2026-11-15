@@ -365,8 +365,29 @@
       const [ollamaUrl, setOllamaUrl] = useState("http://localhost:11434");
       const [ollamaStatus, setOllamaStatus] = useState("idle"); // 'idle', 'checking', 'connected', 'offline'
 
-      // Filters
-      const [categoryFilter, setCategoryFilter] = useState("all");
+      // Execution Configuration State
+      const [benchmarkScope, setBenchmarkScope] = useState(5); // 5, 15, 35
+      const [benchmarkTemp, setBenchmarkTemp] = useState(0.0);
+      const [benchmarkMaxTokens, setBenchmarkMaxTokens] = useState(384);
+      const [liveHardwareTelemetry, setLiveHardwareTelemetry] = useState(null);
+
+      // Unified Models List: Merges verified presets with laptop backend status
+      const availableModelsList = useMemo(() => {
+        if (!remoteModels || remoteModels.length === 0) return VERIFIED_MODELS;
+        
+        return VERIFIED_MODELS.map(localM => {
+          const match = remoteModels.find(rm => rm.id === localM.id || rm.name === localM.name);
+          if (match) {
+            return {
+              ...localM,
+              is_installed: match.is_installed,
+              is_ready: match.is_ready,
+              runtime: match.runtime || localM.runtime
+            };
+          }
+          return localM;
+        });
+      }, [remoteModels]);
       const [searchQuery, setSearchQuery] = useState("");
       const [scrollProgress, setScrollProgress] = useState(0);
 
@@ -410,6 +431,82 @@
         return () => window.removeEventListener("scroll", handleScroll);
       }, []);
 
+      // Backend & Cloudflare Tunnel Connection State
+      const [backendUrl, setBackendUrl] = useState(() => {
+        return localStorage.getItem("tinybench_backend_url") || "http://127.0.0.1:8000";
+      });
+      const [backendStatus, setBackendStatus] = useState("disconnected"); // 'disconnected', 'connecting', 'connected', 'error'
+      const [backendInfo, setBackendInfo] = useState(null);
+      const [showBackendModal, setShowBackendModal] = useState(false);
+      const [remoteModels, setRemoteModels] = useState([]);
+
+      // Check / Connect to Local Laptop Backend via Tunnel or Direct URL
+      const connectBackend = async (targetUrl = backendUrl) => {
+        const cleanUrl = targetUrl.trim().replace(/\/+$/, "");
+        setBackendStatus("connecting");
+        try {
+          const res = await fetch(`${cleanUrl}/api/health`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(4000)
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          setBackendInfo(data);
+          setBackendStatus("connected");
+          localStorage.setItem("tinybench_backend_url", cleanUrl);
+
+          // Fetch real models and runs from laptop backend
+          try {
+            const mRes = await fetch(`${cleanUrl}/api/models`);
+            if (mRes.ok) {
+              const mData = await mRes.json();
+              if (mData.models && mData.models.length > 0) {
+                setRemoteModels(mData.models);
+              }
+            }
+          } catch (_) {}
+
+          try {
+            const rRes = await fetch(`${cleanUrl}/api/runs`);
+            if (rRes.ok) {
+              const rData = await rRes.json();
+              if (rData.runs && rData.runs.length > 0) {
+                // Adapt runs from database into frontend format
+                const formattedRuns = rData.runs.map(r => ({
+                  run_id: r.run_id,
+                  timestamp: r.timestamp.replace('T', ' ').substring(0, 19) + ' UTC',
+                  model_name: r.model_metadata?.name || r.model_id || "CPU Model",
+                  dataset_name: r.dataset_name || "golden_benchmark.jsonl",
+                  total_examples: r.total_examples || 0,
+                  accuracy: r.accuracy || 0,
+                  exact_match_rate: r.exact_match_rate || 0,
+                  median_latency: r.latency_summary?.median_latency_seconds || 0.15,
+                  mean_latency: r.latency_summary?.mean_latency_seconds || 0.18,
+                  peak_memory_mb: r.memory_measurement?.peak_rss_mb || 450,
+                  is_demo: r.is_demo || false,
+                  task_results: r.task_results || []
+                }));
+                setRuns(formattedRuns);
+                if (formattedRuns.length > 0) setActiveRunId(formattedRuns[0].run_id);
+              }
+            }
+          } catch (_) {}
+
+        } catch (err) {
+          console.error("Backend connection error:", err);
+          setBackendStatus("error");
+          setBackendInfo(null);
+        }
+      };
+
+      // Auto-connect on startup
+      useEffect(() => {
+        if (backendUrl) {
+          connectBackend(backendUrl);
+        }
+      }, []);
+
       // Check Ollama daemon connection
       const testOllama = async () => {
         setOllamaStatus("checking");
@@ -425,13 +522,102 @@
         }
       };
 
-      // In-Browser Benchmark Execution Runner
-      const executeBenchmark = () => {
+      // Execution Runner: Dispatches to Local Laptop Backend when connected, or falls back to in-browser engine
+      const executeBenchmark = async () => {
         if (isBenchmarking) return;
         setIsBenchmarking(true);
         setExecProgress(0);
         setExecLogs([]);
 
+        // If connected to local laptop backend, trigger real CPU inference!
+        if (backendStatus === "connected") {
+          try {
+            const cleanUrl = backendUrl.trim().replace(/\/+$/, "");
+            const startRes = await fetch(`${cleanUrl}/api/benchmark/start`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model_id: selectedModel.id,
+                limit: benchmarkScope,
+                temperature: benchmarkTemp,
+                max_tokens: benchmarkMaxTokens,
+                seed: 42
+              })
+            });
+
+            if (!startRes.ok) {
+              const errJson = await startRes.json().catch(() => ({}));
+              throw new Error(errJson.error || `HTTP ${startRes.status}`);
+            }
+
+            const startData = await startRes.json();
+            const activeRunIdentifier = startData.run_id;
+
+            // Open Server-Sent Events stream for real-time progress
+            const eventSource = new EventSource(`${cleanUrl}/api/benchmark/stream`);
+            
+            eventSource.onmessage = (event) => {
+              try {
+                const parsed = JSON.parse(event.data);
+                if (parsed.event === "progress") {
+                  const { current, total, task, system } = parsed.data;
+                  setExecProgress(Math.round((current / total) * 100));
+                  setExecLogs(prev => [...prev, task]);
+                  if (system) setLiveHardwareTelemetry(system);
+                } else if (parsed.event === "ping") {
+                  if (parsed.system) setLiveHardwareTelemetry(prev => ({ ...prev, ...parsed.system }));
+                } else if (parsed.event === "completed") {
+                  eventSource.close();
+                  setIsBenchmarking(false);
+                  setExecProgress(100);
+                  
+                  // Reload runs from laptop backend
+                  connectBackend(cleanUrl);
+                  setActiveRunId(parsed.data.run_id);
+                } else if (parsed.event === "error" || parsed.event === "cancelled") {
+                  eventSource.close();
+                  setIsBenchmarking(false);
+                  alert(`Benchmark run ${parsed.event}: ${parsed.data?.error || ''}`);
+                }
+              } catch (e) {
+                console.error("SSE parse error", e);
+              }
+            };
+
+            eventSource.onerror = (err) => {
+              console.warn("SSE stream closed or error", err);
+              eventSource.close();
+              // Poll fallback
+              const pollInterval = setInterval(async () => {
+                try {
+                  const statusRes = await fetch(`${cleanUrl}/api/benchmark/status`);
+                  if (statusRes.ok) {
+                    const st = await statusRes.json();
+                    if (st.status === "completed" || st.status === "error" || st.status === "cancelled") {
+                      clearInterval(pollInterval);
+                      setIsBenchmarking(false);
+                      setExecProgress(100);
+                      connectBackend(cleanUrl);
+                    } else if (st.status === "running") {
+                      setExecProgress(Math.round(((st.progress || 0) / (st.total || 1)) * 100));
+                      if (st.recent_results) setExecLogs(st.recent_results);
+                    }
+                  }
+                } catch (_) {
+                  clearInterval(pollInterval);
+                  setIsBenchmarking(false);
+                }
+              }, 1000);
+            };
+
+            return;
+          } catch (backendErr) {
+            console.error("Laptop backend dispatch failed, falling back to in-browser execution", backendErr);
+            alert(`Could not start on laptop backend: ${backendErr.message}. Running in-browser test instead.`);
+          }
+        }
+
+        // Fallback: In-browser simulated benchmark runner
         let idx = 0;
         const total = DATASET_ITEMS.length;
         const generatedResults = [];
@@ -455,7 +641,7 @@
               exact_match_rate: Number((finalAcc * 0.95).toFixed(1)),
               median_latency: 0.165,
               mean_latency: 0.174,
-              peak_memory_mb: selectedModel.memoryMb,
+              peak_memory_mb: selectedModel.memoryMb || 420,
               is_demo: selectedModel.id === "mock",
               task_results: generatedResults
             };
@@ -547,7 +733,7 @@
                 ))}
               </nav>
 
-              {/* Right Action Cluster: Theme Toggle + Streamlit Cloud App Button */}
+              {/* Right Action Cluster: Theme Toggle + Backend Hub Button */}
               <div className="flex items-center gap-3">
                 
                 {/* Dark / Light Mode Toggle Button */}
@@ -573,20 +759,30 @@
                   )}
                 </button>
 
-                {/* PROMINENT BUTTON LINKING STREAMLIT WITH VERCEL */}
-                <a
-                  href="https://tinybench-aibenchmark.streamlit.app/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#A3FF00] hover:bg-[#B5FF26] text-black font-extrabold text-xs tracking-tight shadow-md hover:shadow-lg transition-all group"
-                  title="Launch our companion Streamlit Cloud application"
+                {/* LAPTOP BACKEND / CLOUDFLARE TUNNEL CONNECTION BUTTON */}
+                <button
+                  onClick={() => setShowBackendModal(true)}
+                  className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border font-mono text-xs tracking-tight transition-all ${
+                    backendStatus === "connected"
+                      ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20"
+                      : backendStatus === "connecting"
+                      ? "bg-amber-500/10 border-amber-500/40 text-amber-400"
+                      : "bg-[#A3FF00] text-black font-extrabold hover:bg-[#B5FF26] shadow-md"
+                  }`}
+                  title="Configure Cloudflare Tunnel & Laptop Backend Connection"
                 >
-                  <svg className="w-3.5 h-3.5 fill-black" viewBox="0 0 24 24">
-                    <path d="M12 2L2 19.7778H22L12 2Z"/>
-                  </svg>
-                  <span>Streamlit Studio</span>
-                  <span className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
-                </a>
+                  <span className={`w-2 h-2 rounded-full ${
+                    backendStatus === "connected" ? "bg-emerald-400 animate-pulse" : (backendStatus === "connecting" ? "bg-amber-400 animate-ping" : "bg-black")
+                  }`} />
+                  <span className="font-bold">
+                    {backendStatus === "connected" ? "Laptop Connected" : "Connect Laptop"}
+                  </span>
+                  {backendInfo?.system && (
+                    <span className="hidden md:inline text-[10px] opacity-75">
+                      ({backendInfo.system.cpu_count_logical} Cores, {backendInfo.system.total_ram_gb}GB)
+                    </span>
+                  )}
+                </button>
 
                 {/* GitHub Link */}
                 <a
@@ -698,18 +894,19 @@
                           ⚙️ Configure Benchmark Studio
                         </button>
                         <button
-                          onClick={() => setShowEndpointModal(true)}
-                          className={`px-4 py-3.5 text-xs font-mono font-medium rounded-2xl border transition-all ${
+                          onClick={() => setShowBackendModal(true)}
+                          className={`px-4 py-3.5 text-xs font-mono font-medium rounded-2xl border transition-all flex items-center gap-2 ${
                             isDark 
                               ? 'bg-black/40 border-white/10 hover:border-white/20 text-slate-300' 
                               : 'bg-[#F2F7EE] border-[#D4DEC8] hover:border-slate-400 text-slate-700'
                           }`}
                         >
-                          🔌 Connect Ollama / Cloudflare
+                          <span className={`w-2 h-2 rounded-full ${backendStatus === "connected" ? "bg-[#A3FF00]" : "bg-neutral-500"}`} />
+                          <span>🔌 Connect Laptop (Cloudflare Tunnel)</span>
                         </button>
                       </div>
 
-                      {/* Cross-Link Banner to Streamlit Cloud App */}
+                      {/* Architecture Banner: High-Power Laptop Execution */}
                       <div className={`mt-10 p-6 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
                         isDark 
                           ? 'bg-app-surfaceDark border-white/10 tb-card-shadow-dark' 
@@ -719,22 +916,22 @@
                           <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-[#A3FF00]" />
                             <h4 className="font-extrabold text-sm uppercase font-mono tracking-wider text-[#A3FF00]">
-                              Dual Platform Architecture
+                              {backendStatus === "connected" ? "Laptop Backend Active" : "Local Inference Engine"}
                             </h4>
                           </div>
                           <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                            Looking for our full-weight Python inference harness with Gated Llama 3.2 token integration?
+                            {backendStatus === "connected"
+                              ? `Connected to ${backendInfo?.system?.cpu_name || 'Laptop CPU'} with ${backendInfo?.system?.cpu_count_logical} cores and ${backendInfo?.system?.total_ram_gb} GB RAM.`
+                              : "Connect your laptop directly via Cloudflare Tunnel to unlock high-power CPU evaluation without cloud memory limits."}
                           </p>
                         </div>
-                        <a 
-                          href="https://tinybench-aibenchmark.streamlit.app/" 
-                          target="_blank" 
-                          rel="noreferrer"
+                        <button 
+                          onClick={() => setShowBackendModal(true)}
                           className="px-5 py-2.5 rounded-xl bg-[#A3FF00] hover:bg-[#B5FF26] text-black font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap shadow-md group"
                         >
-                          <span>Open Streamlit Cloud</span>
+                          <span>{backendStatus === "connected" ? "Manage Tunnel" : "Connect My Laptop"}</span>
                           <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-                        </a>
+                        </button>
                       </div>
 
                     </div>
@@ -908,7 +1105,7 @@
                           {[
                             "Zero GPU Dependency — Pure CPU Optimization",
                             "Strict 0.0 Greedy Decoding for Determinism",
-                            "Cross-Platform Streamlit & Web Architecture"
+                            "Cloudflare Tunnel Integration for Laptop Inference"
                           ].map((item, i) => (
                             <div key={i} className="flex items-center gap-4">
                               <div className="w-7 h-7 rounded-full bg-[#A3FF00] flex items-center justify-center flex-shrink-0 text-black font-black text-sm">
@@ -995,7 +1192,7 @@
                       </div>
 
                       {/* Right: Quick In-Browser Benchmark Launch Card */}
-                      <div className={`p-8 rounded-3xl border flex flex-col justify-between ${
+                      <div className={`lg:col-span-6 p-8 rounded-3xl border flex flex-col justify-between ${
                         isDark ? 'bg-neutral-950 border-white/10 tb-card-shadow-dark' : 'bg-white border-neutral-300 tb-card-shadow-light'
                       }`}>
                         <div>
@@ -1054,60 +1251,130 @@
                     isDark ? 'bg-app-surfaceDark border-white/10' : 'bg-white border-[#D4DEC8]'
                   }`}>
                     <div>
-                      <label className="block text-xs font-mono uppercase font-bold text-neutral-400 mb-2">1. Choose Model</label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-xs font-mono uppercase font-bold text-neutral-400">1. Target Architecture</label>
+                        {backendStatus === "connected" && (
+                          <span className="text-[10px] font-mono text-[#A3FF00] bg-[#A3FF00]/10 px-2 py-0.5 rounded-full border border-[#A3FF00]/20 font-bold">
+                            Live Laptop Models Synced
+                          </span>
+                        )}
+                      </div>
                       <select 
                         value={selectedModel.id}
-                        onChange={e => setSelectedModel(VERIFIED_MODELS.find(m => m.id === e.target.value))}
+                        onChange={e => setSelectedModel(availableModelsList.find(m => m.id === e.target.value) || VERIFIED_MODELS[0])}
                         className={`w-full p-3.5 rounded-xl border text-sm font-semibold outline-none ${
                           isDark ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-300 text-black'
                         }`}
                       >
-                        {VERIFIED_MODELS.map(m => (
-                          <option key={m.id} value={m.id}>{m.name} — {m.developer}</option>
+                        {availableModelsList.map(m => (
+                          <option key={m.id} value={m.id}>
+                            {m.name} — {m.developer} {m.is_ready ? "✓ (Ready on Laptop)" : (m.is_installed ? "✓ (Installed)" : "")}
+                          </option>
                         ))}
                       </select>
                     </div>
 
-                    {/* Ollama Daemon Connector */}
+                    {/* Backend & Cloudflare Tunnel Connector */}
                     <div className={`p-4 rounded-2xl border ${isDark ? 'bg-neutral-900/60 border-white/10' : 'bg-neutral-50 border-neutral-200'}`}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-mono font-bold uppercase text-[#A3FF00]">Ollama Connection</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${backendStatus === "connected" ? "bg-emerald-400" : "bg-neutral-500"}`} />
+                          <span className="text-xs font-mono font-bold uppercase text-[#A3FF00]">Laptop Backend (Cloudflare Tunnel)</span>
+                        </div>
                         <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
-                          ollamaStatus === "connected" ? "bg-emerald-500/20 text-emerald-400" : (ollamaStatus === "checking" ? "bg-amber-500/20 text-amber-400" : "bg-neutral-500/20 text-neutral-400")
+                          backendStatus === "connected" ? "bg-emerald-500/20 text-emerald-400" : (backendStatus === "connecting" ? "bg-amber-500/20 text-amber-400" : "bg-neutral-500/20 text-neutral-400")
                         }`}>
-                          {ollamaStatus.toUpperCase()}
+                          {backendStatus.toUpperCase()}
                         </span>
                       </div>
                       <div className="flex gap-2">
                         <input 
                           type="text" 
-                          value={ollamaUrl} 
-                          onChange={e => setOllamaUrl(e.target.value)} 
-                          placeholder="http://localhost:11434"
+                          value={backendUrl} 
+                          onChange={e => setBackendUrl(e.target.value)} 
+                          placeholder="https://your-tunnel.trycloudflare.com or http://127.0.0.1:8000"
                           className={`flex-1 px-3 py-2 text-xs font-mono rounded-lg border outline-none ${
                             isDark ? 'bg-black border-neutral-800 text-white' : 'bg-white border-neutral-300 text-black'
                           }`}
                         />
                         <button 
-                          onClick={testOllama}
+                          onClick={() => connectBackend(backendUrl)}
                           className="px-4 py-2 rounded-lg bg-[#A3FF00] text-black font-bold text-xs uppercase"
                         >
-                          Ping Daemon
+                          {backendStatus === "connecting" ? "Connecting..." : "Connect"}
                         </button>
                       </div>
+                      {backendInfo?.system && (
+                        <div className="mt-3 text-[11px] font-mono text-neutral-400 flex flex-wrap gap-x-4 gap-y-1">
+                          <span>CPU: <strong className="text-white">{backendInfo.system.cpu_name}</strong></span>
+                          <span>Cores: <strong className="text-[#A3FF00]">{backendInfo.system.cpu_count_logical}</strong></span>
+                          <span>RAM: <strong className="text-[#A3FF00]">{backendInfo.system.total_ram_gb} GB</strong></span>
+                          <span>Ollama: <strong className={backendInfo.ollama?.available ? "text-emerald-400" : "text-neutral-500"}>{backendInfo.ollama?.available ? "Online" : "Off"}</strong></span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Dataset Scope */}
-                    <div>
-                      <label className="block text-xs font-mono uppercase font-bold text-neutral-400 mb-2">2. Dataset Scope</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {["Quick 5", "Standard 15", "Full 35", "Custom 10"].map(scope => (
-                          <div key={scope} className={`p-3 rounded-xl border text-center font-mono text-xs font-bold cursor-pointer ${
-                            scope === "Quick 5" ? 'border-[#A3FF00] bg-[#A3FF00]/10 text-[#A3FF00]' : (isDark ? 'border-neutral-800 text-neutral-400' : 'border-neutral-200 text-neutral-600')
-                          }`}>
-                            {scope}
+                    {/* Dataset Scope & Generation Parameters */}
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-xs font-mono uppercase font-bold text-neutral-400">2. Evaluation Scope</label>
+                          <span className="text-xs font-mono text-[#A3FF00] font-bold">{benchmarkScope} Tasks</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { count: 5, label: "Quick 5" },
+                            { count: 15, label: "Standard 15" },
+                            { count: 35, label: "Full 35" }
+                          ].map(s => (
+                            <button
+                              type="button"
+                              key={s.count}
+                              onClick={() => setBenchmarkScope(s.count)}
+                              className={`p-3 rounded-xl border text-center font-mono text-xs font-bold transition-all ${
+                                benchmarkScope === s.count
+                                  ? 'border-[#A3FF00] bg-[#A3FF00]/15 text-[#A3FF00] shadow-sm'
+                                  : (isDark ? 'border-neutral-800 text-neutral-400 hover:border-neutral-700' : 'border-neutral-200 text-neutral-600 hover:border-neutral-300')
+                              }`}
+                            >
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Generation Parameter Sliders */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div>
+                          <div className="flex items-center justify-between text-xs font-mono mb-1">
+                            <span className="text-neutral-400">Temperature:</span>
+                            <span className="font-bold text-[#A3FF00]">{benchmarkTemp.toFixed(1)} {benchmarkTemp === 0.0 ? "(Greedy / Deterministic)" : ""}</span>
                           </div>
-                        ))}
+                          <input 
+                            type="range"
+                            min="0.0"
+                            max="1.0"
+                            step="0.1"
+                            value={benchmarkTemp}
+                            onChange={e => setBenchmarkTemp(parseFloat(e.target.value))}
+                            className="w-full accent-[#A3FF00]"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between text-xs font-mono mb-1">
+                            <span className="text-neutral-400">Max Tokens:</span>
+                            <span className="font-bold">{benchmarkMaxTokens}</span>
+                          </div>
+                          <input 
+                            type="range"
+                            min="128"
+                            max="512"
+                            step="64"
+                            value={benchmarkMaxTokens}
+                            onChange={e => setBenchmarkMaxTokens(parseInt(e.target.value))}
+                            className="w-full accent-[#A3FF00]"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -1149,9 +1416,17 @@
                       </div>
                     </div>
 
-                    {/* Live Progress Logs */}
+                    {/* Live Progress Logs & Live Hardware Stats */}
                     <div className={`p-6 rounded-3xl border ${isDark ? 'bg-app-surfaceDark border-white/10' : 'bg-white border-[#D4DEC8]'}`}>
-                      <h4 className="text-xs font-mono font-bold uppercase tracking-widest text-[#A3FF00] mb-3">Live Telemetry Feed</h4>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs font-mono font-bold uppercase tracking-widest text-[#A3FF00]">Live Telemetry Feed</h4>
+                        {liveHardwareTelemetry && (
+                          <div className="flex items-center gap-2 text-[10px] font-mono text-neutral-400">
+                            <span>CPU: <strong className="text-white">{liveHardwareTelemetry.cpu_percent || 0}%</strong></span>
+                            <span>RAM: <strong className="text-[#A3FF00]">{liveHardwareTelemetry.ram_percent || 0}%</strong></span>
+                          </div>
+                        )}
+                      </div>
                       <div className={`p-3 rounded-xl border font-mono text-xs max-h-56 overflow-y-auto space-y-2 ${
                         isDark ? 'bg-neutral-950 border-neutral-900 text-neutral-300' : 'bg-neutral-50 border-neutral-200 text-neutral-800'
                       }`}>
@@ -1188,8 +1463,18 @@
                     </p>
                   </div>
 
-                  {/* Run Switcher Dropdown */}
+                  {/* Run Switcher Dropdown & Live Refresh */}
                   <div className="flex items-center gap-2">
+                    {backendStatus === "connected" && (
+                      <button
+                        onClick={() => connectBackend(backendUrl)}
+                        className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-[#A3FF00] text-xs font-mono text-[#A3FF00] flex items-center gap-1.5 transition-colors"
+                        title="Refresh runs from local laptop SQLite database"
+                      >
+                        <span>🔄</span>
+                        <span className="hidden sm:inline">Sync Laptop DB</span>
+                      </button>
+                    )}
                     <span className="text-xs font-mono text-neutral-400">Select Run:</span>
                     <select
                       value={activeRunId}
@@ -1444,17 +1729,15 @@
                   </p>
                 </div>
 
-                {/* Cross-Link Buttons */}
+                {/* Laptop Backend & Tunnel Hub Button */}
                 <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
-                  <a 
-                    href="https://tinybench-aibenchmark.streamlit.app/" 
-                    target="_blank" 
-                    rel="noreferrer"
+                  <button 
+                    onClick={() => setShowBackendModal(true)}
                     className="px-4 py-2 rounded-xl bg-[#A3FF00] text-black font-extrabold flex items-center gap-1.5 shadow-sm hover:scale-105 transition-transform"
                   >
-                    <span>Launch Streamlit Studio</span>
+                    <span>⚡ Connect Laptop Backend</span>
                     <span>↗</span>
-                  </a>
+                  </button>
 
                   <a 
                     href="https://github.com/shettyadithyar76-prog/tinybench" 
@@ -1475,6 +1758,120 @@
               </div>
             </div>
           </footer>
+
+          {/* ==================================================================
+              LAPTOP BACKEND & CLOUDFLARE TUNNEL MODAL
+              ================================================================== */}
+          {showBackendModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+              <div className={`w-full max-w-xl rounded-3xl border p-6 sm:p-8 space-y-6 ${
+                isDark ? 'bg-neutral-950 border-white/15 text-white' : 'bg-white border-[#D4DEC8] text-black'
+              }`}>
+                <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#A3FF00] flex items-center justify-center text-black font-black text-lg">
+                      ⚡
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black">Laptop Backend & Tunnel Hub</h3>
+                      <p className="text-xs font-mono text-neutral-400">Direct Local CPU Execution</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowBackendModal(false)}
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-sm font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-mono uppercase font-bold text-neutral-400 mb-2">
+                      Cloudflare Tunnel URL or Local URL
+                    </label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={backendUrl}
+                        onChange={e => setBackendUrl(e.target.value)}
+                        placeholder="https://your-tunnel.trycloudflare.com or http://127.0.0.1:8000"
+                        className={`flex-1 px-4 py-3 text-xs font-mono rounded-xl border outline-none ${
+                          isDark ? 'bg-black border-neutral-800 text-white' : 'bg-neutral-50 border-neutral-300 text-black'
+                        }`}
+                      />
+                      <button
+                        onClick={() => connectBackend(backendUrl)}
+                        className="px-5 py-3 rounded-xl bg-[#A3FF00] hover:bg-[#B5FF26] text-black font-bold text-xs uppercase"
+                      >
+                        {backendStatus === "connecting" ? "Checking..." : "Connect"}
+                      </button>
+                    </div>
+                    <p className="text-[11px] font-mono text-neutral-400 mt-2">
+                      💡 Run <code className="text-[#A3FF00] bg-black/40 px-1 py-0.5 rounded">python scripts/serve.py</code> or double-click <code className="text-[#A3FF00] bg-black/40 px-1 py-0.5 rounded">start_backend.bat</code> on your laptop. Copy the generated <code className="text-[#A3FF00]">https://*.trycloudflare.com</code> link here.
+                    </p>
+                  </div>
+
+                  {/* Backend Telemetry Card */}
+                  {backendInfo?.system ? (
+                    <div className={`p-4 rounded-2xl border space-y-3 ${
+                      isDark ? 'bg-neutral-900/80 border-white/10' : 'bg-[#F2F7EE] border-[#D4DEC8]'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-mono uppercase font-bold text-emerald-400">● Connected Hardware</span>
+                        <span className="text-xs font-mono text-neutral-400">{backendInfo.system.os_version}</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-mono">
+                        <div className="p-2 rounded-lg bg-black/40 border border-white/5">
+                          <span className="text-neutral-500 block text-[10px]">CPU</span>
+                          <span className="font-bold truncate block">{backendInfo.system.cpu_name}</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-black/40 border border-white/5">
+                          <span className="text-neutral-500 block text-[10px]">CORES</span>
+                          <span className="font-bold text-[#A3FF00]">{backendInfo.system.cpu_count_logical} Logical</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-black/40 border border-white/5">
+                          <span className="text-neutral-500 block text-[10px]">TOTAL RAM</span>
+                          <span className="font-bold text-[#A3FF00]">{backendInfo.system.total_ram_gb} GB</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-black/40 border border-white/5">
+                          <span className="text-neutral-500 block text-[10px]">AVAIL RAM</span>
+                          <span className="font-bold">{backendInfo.system.available_ram_gb} GB</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-black/40 border border-white/5">
+                          <span className="text-neutral-500 block text-[10px]">OLLAMA</span>
+                          <span className={`font-bold ${backendInfo.ollama?.available ? 'text-emerald-400' : 'text-neutral-500'}`}>
+                            {backendInfo.ollama?.available ? `v${backendInfo.ollama.version}` : 'Not Running'}
+                          </span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-black/40 border border-white/5">
+                          <span className="text-neutral-500 block text-[10px]">STATUS</span>
+                          <span className="font-bold text-emerald-400">Ready</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-2xl border border-dashed border-white/10 text-center py-6">
+                      <p className="text-xs font-mono text-neutral-400">
+                        {backendStatus === "error" 
+                          ? "❌ Could not reach backend server at that URL. Ensure 'python scripts/serve.py' is running on your laptop."
+                          : "No laptop backend connected yet. Benchmarks will run in browser demo mode until connected."}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                  <button
+                    onClick={() => setShowBackendModal(false)}
+                    className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-mono font-bold"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       );

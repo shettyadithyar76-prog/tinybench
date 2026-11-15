@@ -52,13 +52,13 @@ All 40+ unit and integration tests should pass on ordinary CPU hardware in under
 
 ---
 
-## 💻 Running the Streamlit Dashboard
+## 💻 Running the Backend & Web Studio
 
-To verify UI changes locally:
+To verify the backend and web interface locally:
 ```bash
-streamlit run app.py
+python scripts/serve.py
 ```
-Then navigate to `http://localhost:8501`.
+Open `http://localhost:8000/api/health` to verify the local server or open `web/index.html` (or `https://tinybench.vercel.app`) to interact with the studio.
 
 ---
 
@@ -74,7 +74,7 @@ Looking for an issue to pick up? We maintain curated, bite-sized tasks in [docs/
 6. **Add resource measurement for another platform** (e.g. macOS Apple Silicon memory, Linux cgroups).
 7. **Improve CSV/JSON reporting** (e.g. Excel export, Parquet export, LaTeX tables).
 8. **Add documentation and examples** (e.g. Jupyter notebook tutorials).
-9. **Improve the Streamlit dashboard** (e.g. dark mode toggle, filtering improvements).
+9. **Improve the Web Studio UI** (e.g. dark mode toggle, filtering improvements, hardware charts).
 10. **Add tests for edge cases** (e.g. unicode text, long sequences, malformed JSON).
 
 See the [Beginner Issues Guide](docs/beginner_issues.md) for step-by-step acceptance criteria for each task!
