@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Ensure src/ is on sys.path
+# Ensure src/ and repo root are on sys.path
 CURRENT_DIR = Path(__file__).resolve().parent.parent.parent
 SRC_DIR = CURRENT_DIR / "src"
 if str(SRC_DIR) not in sys.path:
@@ -69,17 +69,21 @@ active_execution: dict[str, Any] = {
 }
 
 event_subscribers: list[asyncio.Queue] = []
+main_loop: asyncio.AbstractEventLoop | None = None
 
 
 def get_system_hardware() -> dict[str, Any]:
     """Retrieve detailed laptop hardware telemetry."""
     mem = psutil.virtual_memory()
     cpu_freq = psutil.cpu_freq()
-    
+
     cpu_name = platform.processor() or "CPU"
-    # Friendly cleanup
-    if "Intel" in platform.uname().processor or "AMD" in platform.uname().processor:
-        cpu_name = platform.uname().processor
+    try:
+        uname_proc = platform.uname().processor
+        if uname_proc and ("Intel" in uname_proc or "AMD" in uname_proc):
+            cpu_name = uname_proc
+    except Exception:
+        pass
 
     return {
         "platform": sys.platform,
@@ -88,7 +92,7 @@ def get_system_hardware() -> dict[str, Any]:
         "cpu_name": cpu_name,
         "cpu_count_physical": psutil.cpu_count(logical=False) or 1,
         "cpu_count_logical": psutil.cpu_count(logical=True) or 1,
-        "cpu_freq_mhz": round(cpu_freq.current, 1) if cpu_freq else None,
+        "cpu_freq_mhz": round(cpu_freq.current, 1) if (cpu_freq and cpu_freq.current) else None,
         "cpu_percent": psutil.cpu_percent(interval=None),
         "total_ram_gb": round(mem.total / (1024 ** 3), 2),
         "available_ram_gb": round(mem.available / (1024 ** 3), 2),
@@ -99,23 +103,39 @@ def get_system_hardware() -> dict[str, Any]:
 
 
 def broadcast_event(event_type: str, data: dict[str, Any]) -> None:
-    """Send SSE payload to all connected frontend clients."""
+    """Send SSE payload to all connected frontend clients thread-safely."""
+    global main_loop
     payload = json.dumps({"event": event_type, "timestamp": time.time(), "data": data})
     for queue in list(event_subscribers):
         try:
-            queue.put_nowait(payload)
-        except Exception:
-            pass
+            if main_loop and main_loop.is_running():
+                main_loop.call_soon_threadsafe(queue.put_nowait, payload)
+            else:
+                queue.put_nowait(payload)
+        except Exception as e:
+            logger.debug(f"Broadcast error: {e}")
 
 
 async def api_health(request: Request) -> JSONResponse:
     """Healthcheck and hardware status."""
-    ollama_ok, ollama_version = check_ollama_daemon()
+    global main_loop
+    main_loop = asyncio.get_running_loop()
+
+    try:
+        ollama_ok, ollama_version = check_ollama_daemon()
+    except Exception as e:
+        ollama_ok, ollama_version = False, str(e)
+
+    try:
+        hw = get_system_hardware()
+    except Exception as e:
+        hw = {"error": str(e)}
+
     return JSONResponse({
         "status": "online",
         "service": "tinybench-laptop-backend",
         "version": "0.3.0",
-        "system": get_system_hardware(),
+        "system": hw,
         "ollama": {
             "available": ollama_ok,
             "version": ollama_version,
@@ -128,24 +148,64 @@ async def api_health(request: Request) -> JSONResponse:
 async def api_models(request: Request) -> JSONResponse:
     """List approved models and their local availability on this laptop."""
     models_out = []
-    ollama_ok, _ = check_ollama_daemon()
+    try:
+        ollama_ok, _ = check_ollama_daemon()
+    except Exception:
+        ollama_ok = False
 
-    for m in ModelRegistry.list_all():
-        is_inst = is_model_installed(m.id)
-        models_out.append({
-            "id": m.id,
-            "name": m.name,
-            "developer": m.developer,
-            "parameters": m.parameters,
-            "quantization": m.quantization,
-            "context_window": m.context_window,
-            "description": m.description,
-            "download_size": m.download_size,
-            "runtime": m.runtime,
-            "is_installed": is_inst,
-            "requires_auth": m.requires_auth,
-            "is_ready": (m.runtime == "ollama" and ollama_ok) or (m.runtime != "ollama" and is_inst) or m.runtime == "mock",
-        })
+    try:
+        for m in ModelRegistry.list_available_models():
+            try:
+                is_inst = is_model_installed(m.model_id)
+            except Exception:
+                is_inst = False
+
+            is_ready = False
+            if m.supported_runtime == "ollama":
+                is_ready = ollama_ok and is_inst
+            elif m.supported_runtime == "transformers_cpu":
+                is_ready = is_inst
+            elif "mock" in m.model_id:
+                is_ready = True
+
+            models_out.append({
+                "id": m.model_id,
+                "name": m.model_name,
+                "developer": m.developer,
+                "family": m.family,
+                "parameters": m.parameters,
+                "quantization": m.quantization,
+                "download_size": m.download_size,
+                "runtime": m.supported_runtime,
+                "description": m.description,
+                "is_installed": is_inst,
+                "is_ready": is_ready,
+                "minimum_ram_mb": m.minimum_ram_mb,
+                "recommended_ram_mb": m.recommended_ram_mb,
+                "status": m.status,
+                "status_reason": m.status_reason,
+            })
+    except Exception as e:
+        logger.error(f"Error fetching models: {e}", exc_info=True)
+
+    # Built-in mock simulator
+    models_out.append({
+        "id": "mock",
+        "name": "TinyBench Mock Simulator",
+        "developer": "TinyBench Core",
+        "family": "Simulator",
+        "parameters": "0M (Simulated)",
+        "quantization": "Deterministic",
+        "download_size": "0 MB",
+        "runtime": "Deterministic CPU",
+        "description": "Instantaneous zero-GPU mock evaluation backend for UI benchmarking and testing.",
+        "is_installed": True,
+        "is_ready": True,
+        "minimum_ram_mb": 50,
+        "recommended_ram_mb": 100,
+        "status": "available",
+        "status_reason": "Built-in deterministic test simulator ready.",
+    })
 
     return JSONResponse({"models": models_out, "count": len(models_out)})
 
@@ -155,9 +215,9 @@ async def api_runs(request: Request) -> JSONResponse:
     try:
         limit = int(request.query_params.get("limit", 50))
         all_runs = db.list_runs(limit=limit)
-        return JSONResponse({"runs": [r.model_dump() for r in all_runs], "count": len(all_runs)})
+        return JSONResponse({"runs": all_runs, "count": len(all_runs)})
     except Exception as e:
-        logger.error(f"Error fetching runs: {e}")
+        logger.error(f"Error fetching runs: {e}", exc_info=True)
         return JSONResponse({"error": str(e), "runs": []}, status_code=500)
 
 
@@ -170,7 +230,7 @@ async def api_run_detail(request: Request) -> JSONResponse:
             return JSONResponse({"error": f"Run '{run_id}' not found."}, status_code=404)
         return JSONResponse(run_res.model_dump())
     except Exception as e:
-        logger.error(f"Error fetching run {run_id}: {e}")
+        logger.error(f"Error fetching run {run_id}: {e}", exc_info=True)
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
@@ -178,9 +238,12 @@ def _execute_benchmark_thread(config: BenchmarkConfig, selected_categories: list
     """Worker thread running TinyBench benchmark runner."""
     global active_execution
     try:
-        dataset_path = CURRENT_DIR / "data" / "golden_benchmark.jsonl"
+        dataset_path = Path(config.dataset_path)
         if not dataset_path.exists():
-            dataset_path = CURRENT_DIR / "tests" / "fixtures" / "sample_benchmark.jsonl"
+            dataset_path = CURRENT_DIR / "data" / "golden_benchmark.jsonl"
+            if not dataset_path.exists():
+                dataset_path = CURRENT_DIR / "tests" / "fixtures" / "sample_benchmark.jsonl"
+            config.dataset_path = str(dataset_path)
 
         categories = None
         if selected_categories:
@@ -192,7 +255,7 @@ def _execute_benchmark_thread(config: BenchmarkConfig, selected_categories: list
         active_execution["total"] = total_items
         broadcast_event("started", {
             "run_id": active_execution["run_id"],
-            "model_id": config.model_id,
+            "model_id": config.model_name,
             "total_tasks": total_items,
         })
 
@@ -242,24 +305,26 @@ def _execute_benchmark_thread(config: BenchmarkConfig, selected_categories: list
         with execution_lock:
             active_execution["status"] = "cancelled"
             active_execution["error"] = "Execution cancelled."
-        broadcast_event("cancelled", {"run_id": active_execution["run_id"]})
+        broadcast_event("cancelled", {"run_id": active_execution.get("run_id")})
     except Exception as exc:
         logger.error(f"Benchmark execution failed: {exc}", exc_info=True)
         with execution_lock:
             active_execution["status"] = "error"
             active_execution["error"] = str(exc)
-        broadcast_event("error", {"error": str(exc), "run_id": active_execution["run_id"]})
+        broadcast_event("error", {"error": str(exc), "run_id": active_execution.get("run_id")})
 
 
 async def api_benchmark_start(request: Request) -> JSONResponse:
     """Trigger a new benchmark execution on this laptop."""
-    global active_execution
+    global active_execution, main_loop
+    main_loop = asyncio.get_running_loop()
+
     try:
         body = await request.json()
     except Exception:
         body = {}
 
-    model_id = body.get("model_id", "mock:simulator")
+    model_id = body.get("model_id", "mock")
     limit = int(body.get("limit", 5))
     temperature = float(body.get("temperature", 0.0))
     max_tokens = int(body.get("max_tokens", 384))
@@ -291,8 +356,9 @@ async def api_benchmark_start(request: Request) -> JSONResponse:
         dataset_path = CURRENT_DIR / "tests" / "fixtures" / "sample_benchmark.jsonl"
 
     config = BenchmarkConfig(
-        model_id=model_id,
-        dataset_path=dataset_path,
+        model_name=model_id,
+        dataset_path=str(dataset_path),
+        categories=categories,
         limit=limit,
         generation_config=GenerationConfig(
             temperature=temperature,
@@ -321,7 +387,6 @@ async def api_benchmark_status(request: Request) -> JSONResponse:
     with execution_lock:
         data = dict(active_execution)
         if data.get("completed_result"):
-            # Provide high level summary to keep status light
             data["summary"] = {
                 "accuracy": data["completed_result"].get("accuracy"),
                 "exact_match_rate": data["completed_result"].get("exact_match_rate"),
@@ -344,40 +409,55 @@ async def api_benchmark_cancel(request: Request) -> JSONResponse:
 
 async def api_benchmark_stream(request: Request) -> StreamingResponse:
     """Server-Sent Events (SSE) stream for real-time benchmark telemetry."""
+    global main_loop
+    main_loop = asyncio.get_running_loop()
+
     client_queue: asyncio.Queue = asyncio.Queue()
     event_subscribers.append(client_queue)
 
     async def event_generator():
         # Send initial status
-        init_payload = json.dumps({
-            "event": "connected",
-            "timestamp": time.time(),
-            "data": {
-                "active_execution": active_execution["status"],
-                "system": get_system_hardware(),
-            }
-        })
-        yield f"data: {init_payload}\n\n"
+        try:
+            init_payload = json.dumps({
+                "event": "connected",
+                "timestamp": time.time(),
+                "data": {
+                    "active_execution": active_execution["status"],
+                    "system": get_system_hardware(),
+                }
+            })
+            yield f"data: {init_payload}\n\n"
+        except Exception:
+            return
 
         try:
             while True:
-                # If disconnected by client, break
-                if await request.is_disconnected():
+                # If disconnected by client, break cleanly
+                try:
+                    if await request.is_disconnected():
+                        break
+                except Exception:
                     break
+
                 try:
                     payload = await asyncio.wait_for(client_queue.get(), timeout=2.0)
                     yield f"data: {payload}\n\n"
                 except asyncio.TimeoutError:
                     # Heartbeat / keepalive
-                    heartbeat = json.dumps({
-                        "event": "ping",
-                        "timestamp": time.time(),
-                        "system": {
-                            "cpu_percent": psutil.cpu_percent(interval=None),
-                            "ram_percent": psutil.virtual_memory().percent,
-                        }
-                    })
-                    yield f"data: {heartbeat}\n\n"
+                    try:
+                        heartbeat = json.dumps({
+                            "event": "ping",
+                            "timestamp": time.time(),
+                            "system": {
+                                "cpu_percent": psutil.cpu_percent(interval=None),
+                                "ram_percent": psutil.virtual_memory().percent,
+                            }
+                        })
+                        yield f"data: {heartbeat}\n\n"
+                    except Exception:
+                        break
+        except (asyncio.CancelledError, GeneratorExit):
+            pass
         finally:
             if client_queue in event_subscribers:
                 event_subscribers.remove(client_queue)
@@ -393,17 +473,17 @@ async def api_benchmark_stream(request: Request) -> StreamingResponse:
     )
 
 
-# Assemble routes
+# Assemble routes with explicit OPTIONS support for cross-origin preflight
 routes = [
-    Route("/api/health", api_health, methods=["GET"]),
-    Route("/api/system", api_health, methods=["GET"]),
-    Route("/api/models", api_models, methods=["GET"]),
-    Route("/api/runs", api_runs, methods=["GET"]),
-    Route("/api/runs/{run_id}", api_run_detail, methods=["GET"]),
-    Route("/api/benchmark/start", api_benchmark_start, methods=["POST"]),
-    Route("/api/benchmark/status", api_benchmark_status, methods=["GET"]),
-    Route("/api/benchmark/cancel", api_benchmark_cancel, methods=["POST"]),
-    Route("/api/benchmark/stream", api_benchmark_stream, methods=["GET"]),
+    Route("/api/health", api_health, methods=["GET", "OPTIONS"]),
+    Route("/api/system", api_health, methods=["GET", "OPTIONS"]),
+    Route("/api/models", api_models, methods=["GET", "OPTIONS"]),
+    Route("/api/runs", api_runs, methods=["GET", "OPTIONS"]),
+    Route("/api/runs/{run_id}", api_run_detail, methods=["GET", "OPTIONS"]),
+    Route("/api/benchmark/start", api_benchmark_start, methods=["POST", "OPTIONS"]),
+    Route("/api/benchmark/status", api_benchmark_status, methods=["GET", "OPTIONS"]),
+    Route("/api/benchmark/cancel", api_benchmark_cancel, methods=["POST", "OPTIONS"]),
+    Route("/api/benchmark/stream", api_benchmark_stream, methods=["GET", "OPTIONS"]),
 ]
 
 middleware = [

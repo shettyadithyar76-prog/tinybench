@@ -447,8 +447,7 @@
         try {
           const res = await fetch(`${cleanUrl}/api/health`, {
             method: "GET",
-            headers: { "Content-Type": "application/json" },
-            signal: AbortSignal.timeout(4000)
+            signal: AbortSignal.timeout(5000)
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
@@ -475,16 +474,16 @@
                 // Adapt runs from database into frontend format
                 const formattedRuns = rData.runs.map(r => ({
                   run_id: r.run_id,
-                  timestamp: r.timestamp.replace('T', ' ').substring(0, 19) + ' UTC',
-                  model_name: r.model_metadata?.name || r.model_id || "CPU Model",
+                  timestamp: r.timestamp ? (r.timestamp.replace('T', ' ').substring(0, 19) + ' UTC') : new Date().toISOString(),
+                  model_name: r.model_name || r.model_metadata?.model_name || r.model_metadata?.name || r.model_id || "CPU Model",
                   dataset_name: r.dataset_name || "golden_benchmark.jsonl",
                   total_examples: r.total_examples || 0,
                   accuracy: r.accuracy || 0,
                   exact_match_rate: r.exact_match_rate || 0,
-                  median_latency: r.latency_summary?.median_latency_seconds || 0.15,
-                  mean_latency: r.latency_summary?.mean_latency_seconds || 0.18,
-                  peak_memory_mb: r.memory_measurement?.peak_rss_mb || 450,
-                  is_demo: r.is_demo || false,
+                  median_latency: r.median_latency || r.latency_summary?.median_latency_seconds || 0.15,
+                  mean_latency: r.mean_latency || r.latency_summary?.mean_latency_seconds || 0.18,
+                  peak_memory_mb: r.peak_memory_mb || r.memory_measurement?.peak_rss_mb || 450,
+                  is_demo: Boolean(r.is_demo),
                   task_results: r.task_results || []
                 }));
                 setRuns(formattedRuns);

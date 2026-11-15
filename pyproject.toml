@@ -64,6 +64,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = "-v --strict-markers"
 markers = [
     "integration: marks tests requiring external model downloads",
